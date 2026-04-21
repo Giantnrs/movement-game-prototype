@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Runner Prototype</title>
+    <!-- Tailwind CSS for UI overlay -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MediaPipe Pose tracking -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #1a202c; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
+        /* Video is horizontally flipped to act as a mirror */
+        #webcam-video { position: absolute; bottom: 20px; right: 20px; width: 240px; height: 180px; transform: scaleX(-1); border-radius: 12px; border: 3px solid rgba(255,255,255,0.3); z-index: 20; object-fit: cover; opacity: 0.8; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 30; pointer-events: none; }
+        .pointer-events-auto { pointer-events: auto; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- Camera Feed -->
+    <video id="webcam-video" autoplay playsinline></video>
+    
+    <!-- Game Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Background Music -->
+    <audio id="bg-music" loop preload="auto">
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- UI Layer -->
+    <div id="ui-layer" class="flex flex-col justify-between p-6">
+        
+        <!-- Top HUD -->
+        <div class="flex justify-between items-start w-full max-w-4xl mx-auto hidden" id="hud">
+            <div class="bg-gray-800/80 backdrop-blur rounded-xl p-4 border border-gray-600 shadow-xl">
+                <p class="text-gray-400 text-sm font-bold uppercase tracking-wider">Score</p>
+                <p class="text-4xl font-black text-white" id="score-display">0</p>
+            </div>
+            
+            <div class="bg-red-600/80 backdrop-blur rounded-xl p-4 border border-red-400 shadow-xl text-center mx-4 flex-1 max-w-[150px]">
+                <p class="text-red-200 text-sm font-bold uppercase tracking-wider">Lives</p>
+                <p class="text-4xl font-black text-white" id="lives-display">3</p>
+            </div>
+
+            <div class="bg-indigo-600/80 backdrop-blur rounded-xl p-4 border border-indigo-400 shadow-xl text-right">
+                <p class="text-indigo-200 text-sm font-bold uppercase tracking-wider">Activity</p>
+                <p class="text-2xl font-black text-white"><span id="squats-display">0</span> Squats</p>
+                <p class="text-2xl font-black text-white"><span id="jumps-display">0</span> Jumps</p>
+            </div>
+        </div>
+
+        <!-- Center Screens (Loading, Calibration, Game Over) -->
+        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto" id="center-screens">
+            
+            <!-- Loading AI -->
+            <div id="loading-screen" class="bg-gray-900/90 p-8 rounded-2xl border border-gray-700 text-center max-w-md backdrop-blur-md">
+                <div class="animate-spin inline-block w-12 h-12 border-[4px] border-current border-t-transparent text-indigo-500 rounded-full mb-4" role="status" aria-label="loading"></div>
+                <h1 class="text-3xl font-black mb-2 bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">Active Runner</h1>
+                <p class="text-gray-300">Loading AI Motion Tracking...</p>
+                <p class="text-sm text-gray-500 mt-4">Please allow camera access when prompted.</p>
+            </div>
+
+            <!-- Start / Calibrate -->
+            <div id="start-screen" class="bg-gray-900/90 p-8 rounded-2xl border border-gray-700 text-center max-w-md backdrop-blur-md hidden">
+                <h1 class="text-3xl font-black mb-4">Ready to move?</h1>
+                <p class="text-gray-300 mb-6">Step back so your upper body is visible. Stand still in the center to calibrate.</p>
+                <button id="start-btn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 text-xl w-full">
+                    Start Calibration
+                </button>
+            </div>
+
+            <!-- Calibration Progress -->
+            <div id="calibration-screen" class="bg-gray-900/90 p-8 rounded-2xl border border-gray-700 text-center max-w-md backdrop-blur-md hidden">
+                <h2 class="text-2xl font-bold mb-4 text-yellow-400">Stand Still...</h2>
+                <div class="w-full bg-gray-700 rounded-full h-4 mb-4">
+                    <div id="calibration-bar" class="bg-yellow-400 h-4 rounded-full transition-all duration-100" style="width: 0%"></div>
+                </div>
+                <p class="text-gray-300">Learning your neutral pose.</p>
+            </div>
+
+            <!-- Game Over -->
+            <div id="game-over-screen" class="bg-gray-900/95 p-8 rounded-2xl border border-red-500/50 text-center max-w-md backdrop-blur-md hidden shadow-[0_0_50px_rgba(239,68,68,0.3)]">
+                <h1 class="text-5xl font-black mb-2 text-red-500">GAME OVER</h1>
+                <p class="text-2xl font-bold text-white mb-6">Score: <span id="final-score" class="text-indigo-400">0</span></p>
+                <div class="flex justify-around mb-8 bg-gray-800 p-4 rounded-xl">
+                    <div>
+                        <p class="text-gray-400 text-xs uppercase">Squats</p>
+                        <p class="text-xl font-bold" id="final-squats">0</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 text-xs uppercase">Jumps</p>
+                        <p class="text-xl font-bold" id="final-jumps">0</p>
+                    </div>
+                </div>
+                <button id="restart-btn" class="bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-400 hover:to-blue-500 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 text-xl w-full">
+                    Play Again
+                </button>
+            </div>
+
+        </div>
+        
+        <!-- Level Up Overlay -->
+        <div id="level-up-overlay" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none hidden z-50">
+            <h1 class="text-7xl font-black mb-4 text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,1)] animate-bounce uppercase italic tracking-widest">Level Up!</h1>
+            <p id="level-prompt-text" class="text-3xl font-bold text-white bg-indigo-900/90 px-10 py-5 rounded-2xl backdrop-blur-md border-2 border-indigo-400 shadow-2xl text-center"></p>
+        </div>
+
+        <!-- Pose Debug Text (Bottom Left) -->
+        <div id="debug-text" class="absolute bottom-6 left-6 text-xs text-gray-500 font-mono hidden">
+            Pose Data...
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * CORE GAME STATE & VARIABLES
+ */
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+let gameWidth = window.innerWidth;
+let gameHeight = window.innerHeight;
+canvas.width = gameWidth;
+canvas.height = gameHeight;
+
+window.addEventListener('resize', () => {
+    gameWidth = window.innerWidth;
+    gameHeight = window.innerHeight;
+    canvas.width = gameWidth;
+    canvas.height = gameHeight;
+});
+
+// Game States: loading, start, calibrating, playing, gameover
+let gameState = 'loading'; 
+
+// Gameplay variables
+let score = 0;
+let speed = 4;
+let frameCount = 0;
+let obstacles = [];
+let gameLoopId;
+let lives = 3;
+let invulnerableFrames = 0;
+let nextLifeScore = 100;
+let levelUpTimer = 0;
+let nextMilestone = 100;
+
+// Stats
+let stats = { squats: 0, jumps: 0 };
+
+// Player tracking
+const lanes = [-1, 0, 1]; // Left, Center, Right
+let currentLane = 0; 
+let isSquatting = false;
+let isJumping = false;
+let actionCooldown = 0; // Prevent rapid erratic switching
+
+// AI & Pose Baseline
+let baseline = { y: null };
+let calibrationFrames = 0;
+const CALIBRATION_REQUIRED_FRAMES = 60; // Approx 2 seconds at 30fps
+
+// Audio Setup
+const bgMusic = document.getElementById('bg-music');
+bgMusic.volume = 0.4;
+const playlist = [
+    "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+    "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+    "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+];
+
+/**
+ * AI / MEDIAPIPE POSE SETUP
+ */
+const videoElement = document.getElementById('webcam-video');
+const pose = new Pose({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+});
+
+pose.setOptions({
+    modelComplexity: 1,
+    smoothLandmarks: true,
+    enableSegmentation: false,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+});
+
+pose.onResults(onPoseResults);
+
+const camera = new Camera(videoElement, {
+    onFrame: async () => {
+        await pose.send({image: videoElement});
+    },
+    width: 640,
+    height: 480
+});
+
+// Start camera. This resolves when the first frame is processed.
+camera.start().then(() => {
+    // Model is loaded and camera is active
+    document.getElementById('loading-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
+    gameState = 'start';
+    drawBackground(); // Draw initial static background
+});
+
+/**
+ * POSE PROCESSING LOGIC
+ */
+function onPoseResults(results) {
+    if (!results.poseLandmarks) return;
+
+    // Get keypoints
+    const leftShoulder = results.poseLandmarks[11];
+    const rightShoulder = results.poseLandmarks[12];
+    const leftWrist = results.poseLandmarks[15];
+    const rightWrist = results.poseLandmarks[16];
+    
+    // Average shoulder Y (0 is top of image, 1 is bottom)
+    const avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+
+    // Debug info
+    document.getElementById('debug-text').innerText = 
+        `Y: ${avgShoulderY.toFixed(2)} | Baseline Y: ${baseline.y ? baseline.y.toFixed(2) : 'N/A'}`;
+
+    if (gameState === 'calibrating') {
+        // Accumulate baseline
+        if (!baseline.y) { baseline.y = 0; }
+        baseline.y += avgShoulderY;
+        calibrationFrames++;
+        
+        document.getElementById('calibration-bar').style.width = `${(calibrationFrames/CALIBRATION_REQUIRED_FRAMES)*100}%`;
+
+        if (calibrationFrames >= CALIBRATION_REQUIRED_FRAMES) {
+            baseline.y /= CALIBRATION_REQUIRED_FRAMES;
+            startGameplay();
+        }
+    } else if (gameState === 'playing') {
+        handlePlayerMovement(leftWrist, rightWrist, leftShoulder, rightShoulder, avgShoulderY);
+    }
+}
+
+function handlePlayerMovement(leftWrist, rightWrist, leftShoulder, rightShoulder, shoulderY) {
+    if (actionCooldown > 0) actionCooldown--;
+
+    // THRESHOLDS for movement
+    const squatThreshold = 0.10; // Y axis drops (value increases)
+    
+    // Arm movement thresholds relative to shoulder
+    const armLevelThreshold = 0.15; // Wrist is roughly level with shoulder
+    const armsUpThreshold = -0.15;  // Wrist is significantly above shoulder
+
+    // Reset jump/squat states
+    let wasSquatting = isSquatting;
+    let wasJumping = isJumping;
+    
+    isSquatting = false;
+    isJumping = false;
+
+    // Check Arm Positions
+    const leftArmRaised = leftWrist.y < leftShoulder.y + armLevelThreshold;
+    const rightArmRaised = rightWrist.y < rightShoulder.y + armLevelThreshold;
+    const bothArmsUp = leftWrist.y < leftShoulder.y + armsUpThreshold && rightWrist.y < rightShoulder.y + armsUpThreshold;
+
+    // 1. Check Vertical Actions (Squat/Jump)
+    if (bothArmsUp) {
+        isJumping = true;
+        if (!wasJumping) { stats.jumps++; updateHUD(); }
+    } else if (shoulderY > baseline.y + squatThreshold) {
+        isSquatting = true;
+        if (!wasSquatting) { stats.squats++; updateHUD(); }
+    }
+
+    // 2. Check Horizontal Actions (Level Left / Level Right)
+    if (actionCooldown === 0 && !isSquatting && !isJumping) {
+        if (leftArmRaised && !rightArmRaised) {
+            // Move Left
+            if (currentLane > -1) {
+                currentLane--;
+                actionCooldown = 20; // Wait before allowing another shift
+            }
+        } else if (rightArmRaised && !leftArmRaised) {
+            // Move Right
+            if (currentLane < 1) {
+                currentLane++;
+                actionCooldown = 20;
+            }
+        }
+    }
+}
+
+/**
+ * UI CONTROLS
+ */
+document.getElementById('start-btn').addEventListener('click', () => {
+    // Unlock audio on immediate user click to bypass browser autoplay restrictions
+    bgMusic.play().then(() => {
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
+    }).catch(e => console.log("Audio unlock failed:", e));
+
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('calibration-screen').classList.remove('hidden');
+    gameState = 'calibrating';
+    baseline = { y: null };
+    calibrationFrames = 0;
+});
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('calibration-screen').classList.remove('hidden');
+    gameState = 'calibrating';
+    baseline = { y: null };
+    calibrationFrames = 0;
+});
+
+function updateHUD() {
+    document.getElementById('score-display').innerText = Math.floor(score);
+    document.getElementById('lives-display').innerText = lives;
+    document.getElementById('squats-display').innerText = stats.squats;
+    document.getElementById('jumps-display').innerText = stats.jumps;
+}
+
+function startGameplay() {
+    document.getElementById('calibration-screen').classList.add('hidden');
+    document.getElementById('level-up-overlay').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    
+    // Reset Game Variables
+    gameState = 'playing';
+    score = 0;
+    lives = 3;
+    nextLifeScore = 100;
+    levelUpTimer = 0;
+    nextMilestone = 100;
+    speed = 4;
+    invulnerableFrames = 0;
+    frameCount = 0;
+    obstacles = [];
+    currentLane = 0;
+    stats = { squats: 0, jumps: 0 };
+    updateHUD();
+    
+    // Start Random Music Track
+    const randomTrack = playlist[Math.floor(Math.random() * playlist.length)];
+    if (bgMusic.src !== randomTrack) {
+        bgMusic.src = randomTrack;
+    }
+    bgMusic.currentTime = 0;
+    bgMusic.play().catch(e => console.log("Audio autoplay blocked by browser:", e));
+    
+    if(gameLoopId) cancelAnimationFrame(gameLoopId);
+    gameLoop();
+}
+
+function gameOver() {
+    gameState = 'gameover';
+    bgMusic.pause(); // Stop music when dead
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('level-up-overlay').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.remove('hidden');
+    document.getElementById('final-score').innerText = Math.floor(score);
+    document.getElementById('final-squats').innerText = stats.squats;
+    document.getElementById('final-jumps').innerText = stats.jumps;
+}
+
+/**
+ * GAME ENGINE & RENDERING
+ */
+
+// Perspective and layout constants
+const horizonY = gameHeight * 0.3;
+const laneWidthBottom = gameWidth / 3;
+const laneWidthTop = gameWidth / 8; // Taper to horizon
+
+function getScreenPos(laneIdx, depth) {
+    // depth: 0 is horizon (far), 1 is bottom of screen (near)
+    const currentY = horizonY + (gameHeight - horizonY) * depth;
+    
+    // Calculate lane center at this depth
+    const totalWidthAtDepth = laneWidthTop + (laneWidthBottom * 3 - laneWidthTop) * depth;
+    const laneW = totalWidthAtDepth / 3;
+    const centerX = gameWidth / 2;
+    
+    const xOffset = laneIdx * laneW;
+    const currentX = centerX + xOffset;
+    
+    return { x: currentX, y: currentY, w: laneW * 0.8 };
+}
+
+function drawBackground() {
+    // Sky
+    ctx.fillStyle = '#0f172a'; // slate-900
+    ctx.fillRect(0, 0, gameWidth, horizonY);
+    
+    // Ground
+    ctx.fillStyle = '#1e293b'; // slate-800
+    ctx.fillRect(0, horizonY, gameWidth, gameHeight - horizonY);
+    
+    // Draw 3 Lanes (Pseudo 3D lines)
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 4;
+    
+    const pFarLeft = getScreenPos(-1.5, 0);
+    const pFarRight = getScreenPos(1.5, 0);
+    const pNearLeft = getScreenPos(-1.5, 1);
+    const pNearRight = getScreenPos(1.5, 1);
+    
+    const pFarL1 = getScreenPos(-0.5, 0);
+    const pNearL1 = getScreenPos(-0.5, 1);
+    const pFarR1 = getScreenPos(0.5, 0);
+    const pNearR1 = getScreenPos(0.5, 1);
+
+    ctx.beginPath();
+    ctx.moveTo(pNearLeft.x, pNearLeft.y); ctx.lineTo(pFarLeft.x, pFarLeft.y);
+    ctx.moveTo(pNearL1.x, pNearL1.y); ctx.lineTo(pFarL1.x, pFarL1.y);
+    ctx.moveTo(pNearR1.x, pNearR1.y); ctx.lineTo(pFarR1.x, pFarR1.y);
+    ctx.moveTo(pNearRight.x, pNearRight.y); ctx.lineTo(pFarRight.x, pFarRight.y);
+    ctx.stroke();
+}
+
+function spawnObstacle() {
+    let availableTypes = ['high', 'low', 'block'];
+    
+    // Progressive Difficulty
+    if (score > 100) availableTypes.push('low-wide');
+    if (score > 200) availableTypes.push('door');
+    
+    const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+    let lane = lanes[Math.floor(Math.random() * lanes.length)];
+    let span = 1; // Default to taking up 1 lane
+
+    // Configure special multi-lane obstacles
+    if (type === 'low-wide') {
+        lane = 0; // Center it
+        span = 3; // Covers all 3 lanes
+    } else if (type === 'door') {
+        span = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3 lanes wide
+        if (span === 3) {
+            lane = 0; // Must be centered
+        } else if (span === 2) {
+            lane = Math.random() < 0.5 ? -0.5 : 0.5; // Centers between Left+Center OR Center+Right
+        } else {
+            lane = lanes[Math.floor(Math.random() * lanes.length)];
+        }
+    }
+    
+    obstacles.push({
+        lane: lane,
+        span: span,
+        depth: 0, // Starts at horizon
+        type: type,
+        active: true
+    });
+}
+
+function gameLoop() {
+    if (gameState !== 'playing') return;
+
+    // Update state
+    frameCount++;
+
+    if (levelUpTimer > 0) {
+        // WE ARE IN THE "NO BLOCK" / "LEVEL UP" PAUSE
+        levelUpTimer--;
+        if (levelUpTimer === 0) {
+            document.getElementById('level-up-overlay').classList.add('hidden');
+        }
+    } else {
+        // NORMAL GAMEPLAY
+        score += (speed / 100);
+        
+        // Increase difficulty gradually
+        speed = 4 + (score / 100);
+
+        // Grant an extra life every 100 points
+        if (score >= nextLifeScore) {
+            lives++;
+            nextLifeScore += 100;
+            
+            // Flash the lives display green to notify the player
+            const livesEl = document.getElementById('lives-display');
+            livesEl.classList.add('text-green-400');
+            setTimeout(() => livesEl.classList.remove('text-green-400'), 500);
+        }
+
+        // Check milestones for level up events
+        if (score >= nextMilestone && nextMilestone <= 400) {
+            levelUpTimer = 300; // 5 seconds at 60fps (300 frames)
+            
+            let currentLevelMessage = "";
+            if (nextMilestone === 100) currentLevelMessage = "Jump to avoid three row obstacles!";
+            else if (nextMilestone === 200) currentLevelMessage = "Duck to avoid door obstacles!";
+            else if (nextMilestone === 300) currentLevelMessage = "You are a moving star!";
+            else if (nextMilestone === 400) currentLevelMessage = "You are a legend!";
+            
+            document.getElementById('level-prompt-text').innerText = currentLevelMessage;
+            document.getElementById('level-up-overlay').classList.remove('hidden');
+
+            nextMilestone += 100;
+        } else {
+            // Spawn obstacles ONLY if we are not pausing for a milestone
+            let spawnRate = Math.max(40, 100 - Math.floor(speed * 3));
+            if (frameCount % spawnRate === 0) {
+                spawnObstacle();
+            }
+        }
+    }
+
+    if (invulnerableFrames > 0) invulnerableFrames--;
+    
+    if (frameCount % 10 === 0) updateHUD();
+
+    // Clear and draw background
+    ctx.clearRect(0, 0, gameWidth, gameHeight);
+    drawBackground();
+
+    // Player Configuration
+    const playerDepth = 0.85; // Near the bottom
+    const pPos = getScreenPos(currentLane, playerDepth);
+    
+    // Obstacle update and draw logic
+    // We sort obstacles by depth so closer ones draw on top
+    obstacles.sort((a,b) => a.depth - b.depth);
+    
+    for (let i = 0; i < obstacles.length; i++) {
+        let obs = obstacles[i];
+        if (!obs.active) continue;
+
+        // Move obstacle closer
+        // Speed scaling based on depth gives pseudo-3d acceleration feel
+        obs.depth += (speed * 0.001) + (obs.depth * 0.02);
+
+        // Draw obstacle
+        const oPos = getScreenPos(obs.lane, obs.depth);
+        const scale = 0.2 + (obs.depth * 0.8); // Scale size based on depth
+        const totalW = oPos.w * obs.span * scale; // Adjust width for spanning multiple lanes
+        
+        ctx.save();
+        if (obs.type === 'high') {
+            // Floating barrier (Need to squat)
+            ctx.fillStyle = '#f59e0b'; // amber-500
+            ctx.shadowColor = '#f59e0b';
+            ctx.shadowBlur = 15;
+            ctx.fillRect(oPos.x - (totalW/2), oPos.y - (100*scale), totalW, 40*scale);
+        } else if (obs.type === 'low' || obs.type === 'low-wide') {
+            // Ground barrier (Need to jump)
+            ctx.fillStyle = obs.type === 'low-wide' ? '#dc2626' : '#ef4444'; // slightly darker red for wide
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 15;
+            ctx.fillRect(oPos.x - (totalW/2), oPos.y - (30*scale), totalW, 30*scale);
+        } else if (obs.type === 'block') {
+            // Full block (Need to dodge)
+            ctx.fillStyle = '#ec4899'; // pink-500
+            ctx.shadowColor = '#ec4899';
+            ctx.shadowBlur = 15;
+            ctx.fillRect(oPos.x - (totalW/2), oPos.y - (80*scale), totalW, 80*scale);
+        } else if (obs.type === 'door') {
+            // Door frame (Need to duck/squat)
+            ctx.fillStyle = '#0ea5e9'; // sky-500
+            ctx.shadowColor = '#0ea5e9';
+            ctx.shadowBlur = 15;
+            // Draw Top bar
+            ctx.fillRect(oPos.x - (totalW/2), oPos.y - (120*scale), totalW, 40*scale);
+            // Draw Left pillar
+            ctx.fillRect(oPos.x - (totalW/2), oPos.y - (120*scale), 20*scale, 120*scale);
+            // Draw Right pillar
+            ctx.fillRect(oPos.x + (totalW/2) - (20*scale), oPos.y - (120*scale), 20*scale, 120*scale);
+        }
+        ctx.restore();
+
+        // Collision Detection
+        // Only check when obstacle is at player's depth slice
+        if (obs.depth > playerDepth - 0.1 && obs.depth < playerDepth + 0.1) {
+            
+            // Check if player's current lane intersects the obstacle's total span
+            let isHitLane = Math.abs(currentLane - obs.lane) <= (obs.span - 1) / 2 + 0.01;
+
+            if (isHitLane) {
+                let hit = false;
+                if (obs.type === 'block') {
+                    hit = true; // Cannot jump or squat under a block
+                } else if ((obs.type === 'high' || obs.type === 'door') && !isSquatting) {
+                    hit = true; // Hit face if didn't squat
+                } else if ((obs.type === 'low' || obs.type === 'low-wide') && !isJumping) {
+                    hit = true; // Tripped if didn't jump
+                }
+
+                if (hit && invulnerableFrames === 0) {
+                    obs.active = false; // Destroy the obstacle that hit you
+                    lives--;
+                    updateHUD();
+                    
+                    if (lives <= 0) {
+                        gameOver();
+                        return; // Stop rendering
+                    } else {
+                        invulnerableFrames = 60; // 1 second of invulnerability (approx 60fps)
+                    }
+                }
+            }
+        }
+        
+        // Remove obstacles passed the camera
+        if (obs.depth > 1.2) {
+            obs.active = false;
+        }
+    }
+    
+    // Clean up inactive obstacles
+    obstacles = obstacles.filter(o => o.active);
+
+    // Draw Player
+    if (invulnerableFrames === 0 || Math.floor(frameCount / 5) % 2 === 0) {
+        ctx.save();
+        let pHeight = 80;
+        let pYOffset = 0;
+        let color = '#3b82f6'; // blue-500 (Normal)
+        
+        if (isJumping) {
+            pYOffset = -60; // Move up
+            color = '#a855f7'; // purple-500
+        } else if (isSquatting) {
+            pHeight = 40; // Shrink
+            pYOffset = 40; // Move down
+            color = '#10b981'; // emerald-500
+        }
+
+        if (invulnerableFrames > 0) {
+            color = '#ef4444'; // Flash red when hit
+        }
+
+        // Glow effect
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+        
+        // Draw character (A simple high-tech pill shape)
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect(pPos.x - (pPos.w*0.3)/2, pPos.y - pHeight + pYOffset, pPos.w*0.3, pHeight, 20);
+        ctx.fill();
+        
+        // Draw trail/shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.ellipse(pPos.x, pPos.y, pPos.w*0.2, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    gameLoopId = requestAnimationFrame(gameLoop);
+}
+</script>
+
+</body>
+</html>
