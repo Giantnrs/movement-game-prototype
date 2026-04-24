@@ -69,6 +69,24 @@
                 <p class="text-sm text-gray-500 mt-4">Please allow camera access when prompted.</p>
             </div>
 
+            <!-- Instructions: graphic scales to fit viewport—no scroll -->
+            <div id="instruction-screen" class="bg-gray-900/95 flex flex-col min-h-0 max-h-[calc(100dvh-1.25rem)] h-[calc(100dvh-1.25rem)] w-[min(100%,48rem)] max-w-3xl p-3 sm:p-4 md:p-5 rounded-2xl border-2 border-indigo-500/40 text-center overflow-hidden backdrop-blur-md hidden shadow-xl">
+                <div class="shrink-0">
+                    <h2 class="text-xl sm:text-2xl md:text-3xl font-black text-white mb-0.5">Active Runner</h2>
+                    <p class="text-indigo-300 text-sm sm:text-base md:text-lg font-semibold mb-2">How to play</p>
+                </div>
+                <div class="flex-1 min-h-0 flex items-center justify-center py-1">
+                    <img src="instruction.png" alt="Instructions for Active Runner: camera position, lane changes, jump, duck, obstacles, and calibration." class="max-h-full max-w-full h-auto w-auto object-contain rounded-lg border border-indigo-500/40 shadow-lg select-none" loading="eager" decoding="async">
+                </div>
+                <div class="shrink-0 text-left bg-amber-950/50 border border-amber-600/40 rounded-lg px-3 py-2 mb-2" role="note" aria-label="Safety notice">
+                    <p class="text-amber-200 font-bold text-xs uppercase tracking-wide mb-0.5">Safety</p>
+                    <p class="text-amber-50/95 text-xs sm:text-sm leading-snug">Use a clear, slip-free area with room to move your arms. Go at your own pace, hold support if you need it, and stop if you feel dizzy, unsteady, or any pain.</p>
+                </div>
+                <button type="button" id="instruction-continue-btn" class="shrink-0 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white font-bold py-3 sm:py-4 px-6 rounded-xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-lg sm:text-xl w-full">
+                    I understand—continue
+                </button>
+            </div>
+
             <!-- Start / Calibrate -->
             <div id="start-screen" class="bg-gray-900/90 p-8 rounded-2xl border border-gray-700 text-center max-w-md backdrop-blur-md hidden">
                 <h1 class="text-3xl font-black mb-4">Ready to move?</h1>
@@ -229,9 +247,14 @@ const camera = new Camera(videoElement, {
 camera.start().then(() => {
     // Model is loaded and camera is active
     document.getElementById('loading-screen').classList.add('hidden');
-    document.getElementById('start-screen').classList.remove('hidden');
+    document.getElementById('instruction-screen').classList.remove('hidden');
     gameState = 'start';
     drawBackground(); // Draw initial static background
+});
+
+document.getElementById('instruction-continue-btn').addEventListener('click', () => {
+    document.getElementById('instruction-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
 });
 
 /**
