@@ -54,6 +54,7 @@
                 <p class="text-indigo-200 text-sm font-bold uppercase tracking-wider">Activity</p>
                 <p class="text-2xl font-black text-white"><span id="squats-display">0</span> Squats</p>
                 <p class="text-2xl font-black text-white"><span id="jumps-display">0</span> Jumps</p>
+                <p class="text-lg font-bold text-yellow-400 mt-1"><span id="calories-display">0.0</span> kcal</p>
             </div>
         </div>
 
@@ -86,11 +87,12 @@
                 <p class="text-gray-300">Learning your neutral pose.</p>
             </div>
 
-            <!-- Game Over -->
-            <div id="game-over-screen" class="bg-gray-900/95 p-8 rounded-2xl border border-red-500/50 text-center max-w-md backdrop-blur-md hidden shadow-[0_0_50px_rgba(239,68,68,0.3)]">
-                <h1 class="text-5xl font-black mb-2 text-red-500">GAME OVER</h1>
-                <p class="text-2xl font-bold text-white mb-6">Score: <span id="final-score" class="text-indigo-400">0</span></p>
-                <div class="flex justify-around mb-8 bg-gray-800 p-4 rounded-xl">
+            <!-- Game Over / Doing Great -->
+            <div id="game-over-screen" class="bg-gray-900/95 p-8 rounded-2xl border border-green-500/50 text-center max-w-md backdrop-blur-md hidden shadow-[0_0_50px_rgba(34,197,94,0.3)]">
+                <h1 class="text-4xl font-black mb-2 text-green-400">You are doing great!</h1>
+                <p class="text-xl font-bold text-white mb-4">Score: <span id="final-score" class="text-indigo-400">0</span></p>
+                
+                <div class="flex justify-around mb-6 bg-gray-800 p-4 rounded-xl">
                     <div>
                         <p class="text-gray-400 text-xs uppercase">Squats</p>
                         <p class="text-xl font-bold" id="final-squats">0</p>
@@ -99,9 +101,19 @@
                         <p class="text-gray-400 text-xs uppercase">Jumps</p>
                         <p class="text-xl font-bold" id="final-jumps">0</p>
                     </div>
+                    <div>
+                        <p class="text-gray-400 text-xs uppercase">Energy</p>
+                        <p class="text-xl font-bold text-yellow-400"><span id="final-calories">0.0</span><span class="text-xs">kcal</span></p>
+                    </div>
                 </div>
-                <button id="restart-btn" class="bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-400 hover:to-blue-500 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 text-xl w-full">
-                    Play Again
+
+                <div class="bg-blue-900/40 p-4 rounded-xl mb-6 border border-blue-500/30 text-left">
+                    <p class="text-blue-300 text-xs font-bold uppercase mb-1">Did you know?</p>
+                    <p class="text-sm text-gray-200 italic" id="health-fact">...</p>
+                </div>
+
+                <button id="restart-btn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 text-xl w-full">
+                    Keep Moving!
                 </button>
             </div>
 
@@ -156,6 +168,15 @@ let nextMilestone = 100;
 
 // Stats
 let stats = { squats: 0, jumps: 0 };
+let calories = 0.0;
+const healthFacts = [
+    "Squatting strengthens your core and lower body, improving overall balance and posture.",
+    "Jumping movements build bone density and increase lower body muscle power.",
+    "Just 10 minutes of active gaming can elevate your heart rate to the equivalent of a brisk walk.",
+    "Crossing your midline (moving side-to-side) helps connect the left and right hemispheres of your brain.",
+    "Short bursts of exercise throughout the day can significantly boost your mood and mental focus.",
+    "Raising your arms above your head engages your shoulder stabilizers and upper back muscles."
+];
 
 // Player tracking
 const lanes = [-1, 0, 1]; // Left, Center, Right
@@ -270,12 +291,16 @@ function handlePlayerMovement(leftWrist, rightWrist, leftShoulder, rightShoulder
     const leftArmRaised = leftWrist.y < leftShoulder.y + armLevelThreshold;
     const rightArmRaised = rightWrist.y < rightShoulder.y + armLevelThreshold;
     const bothArmsUp = leftWrist.y < leftShoulder.y + armsUpThreshold && rightWrist.y < rightShoulder.y + armsUpThreshold;
+    
+    // Check if both arms are level (T-pose) but not raised all the way up for a jump
+    const bothArmsLevel = leftArmRaised && rightArmRaised && !bothArmsUp;
 
     // 1. Check Vertical Actions (Squat/Jump)
     if (bothArmsUp) {
         isJumping = true;
         if (!wasJumping) { stats.jumps++; updateHUD(); }
-    } else if (shoulderY > baseline.y + squatThreshold) {
+    } else if (bothArmsLevel || shoulderY > baseline.y + squatThreshold) {
+        // Squat triggers if you physically duck OR if you level both arms!
         isSquatting = true;
         if (!wasSquatting) { stats.squats++; updateHUD(); }
     }
@@ -328,6 +353,7 @@ function updateHUD() {
     document.getElementById('lives-display').innerText = lives;
     document.getElementById('squats-display').innerText = stats.squats;
     document.getElementById('jumps-display').innerText = stats.jumps;
+    document.getElementById('calories-display').innerText = calories.toFixed(1);
 }
 
 function startGameplay() {
@@ -348,6 +374,7 @@ function startGameplay() {
     obstacles = [];
     currentLane = 0;
     stats = { squats: 0, jumps: 0 };
+    calories = 0.0;
     updateHUD();
     
     // Start Random Music Track
@@ -371,6 +398,11 @@ function gameOver() {
     document.getElementById('final-score').innerText = Math.floor(score);
     document.getElementById('final-squats').innerText = stats.squats;
     document.getElementById('final-jumps').innerText = stats.jumps;
+    document.getElementById('final-calories').innerText = calories.toFixed(1);
+    
+    // Set a random health fact
+    const randomFact = healthFacts[Math.floor(Math.random() * healthFacts.length)];
+    document.getElementById('health-fact').innerText = randomFact;
 }
 
 /**
@@ -468,6 +500,10 @@ function gameLoop() {
 
     // Update state
     frameCount++;
+
+    // Calculate energy burned (Rough estimation formula)
+    // Running (score) + 0.5 kcal per squat + 0.8 kcal per jump
+    calories = (score * 0.02) + (stats.squats * 0.5) + (stats.jumps * 0.8);
 
     if (levelUpTimer > 0) {
         // WE ARE IN THE "NO BLOCK" / "LEVEL UP" PAUSE
