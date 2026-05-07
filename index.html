@@ -1013,7 +1013,7 @@ function gameLoop() {
  * INITIALIZATION
  */
 window.addEventListener('DOMContentLoaded', () => {
-    const savedTheme = localStorage.getItem('game_theme') || 'dark';
+    const savedTheme = localStorage.getItem('game_theme') || 'light';
     document.getElementById('theme-select').value = savedTheme; updateTheme(savedTheme);
     const savedLang = localStorage.getItem('game_lang') || 'en';
     document.getElementById('lang-select').value = savedLang; updateLanguage(savedLang);
