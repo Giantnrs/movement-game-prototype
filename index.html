@@ -1,31 +1,48 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Active Runner Prototype</title>
-    <!-- Tailwind CSS for UI overlay -->
+    <!-- Tailwind CSS for UI overlay with Dark Mode configuration -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- MediaPipe Pose tracking -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontSize: {
+                        'base': '1.125rem',
+                        'lg': '1.25rem',
+                        'xl': '1.5rem',
+                        '2xl': '1.875rem',
+                    }
+                }
+            }
+        }
+    </script>
     
     <style>
-        body { margin: 0; overflow: hidden; background-color: #1a202c; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background-color 0.3s; }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
-        /* Video is horizontally flipped to act as a mirror */
         #webcam-video { position: absolute; bottom: 20px; right: 20px; width: 240px; height: 180px; transform: scaleX(-1); border-radius: 12px; border: 3px solid rgba(255,255,255,0.3); z-index: 20; object-fit: cover; opacity: 0.8; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 30; pointer-events: none; }
         .pointer-events-auto { pointer-events: auto; }
         .hidden { display: none !important; }
+        
+        input:focus, select:focus, button:focus {
+            outline: 4px solid #3b82f6;
+            outline-offset: 2px;
+        }
+        #center-screens { overflow-y: auto; }
     </style>
 </head>
-<body>
+<body class="bg-slate-100 dark:bg-[#1a202c] text-gray-900 dark:text-white">
 
 <div id="game-container">
     <!-- Camera Feed -->
-    <video id="webcam-video" autoplay playsinline></video>
+    <video id="webcam-video" class="hidden" autoplay playsinline></video>
     
     <!-- Game Canvas -->
     <canvas id="game-canvas"></canvas>
@@ -38,111 +55,185 @@
     <!-- UI Layer -->
     <div id="ui-layer" class="flex flex-col justify-between p-6">
         
-        <!-- Top HUD -->
-        <div class="flex justify-between items-start w-full max-w-4xl mx-auto hidden" id="hud">
-            <div class="bg-gray-800/80 backdrop-blur rounded-xl p-4 border border-gray-600 shadow-xl">
-                <p class="text-gray-400 text-sm font-bold uppercase tracking-wider">Score</p>
-                <p class="text-4xl font-black text-white" id="score-display">0</p>
+        <!-- 1 PLAYER HUD (Original Design) -->
+        <div class="flex justify-between items-start w-full max-w-4xl mx-auto hidden" id="hud-1p">
+            <div class="bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-xl p-4 border border-gray-300 dark:border-gray-600 shadow-xl">
+                <p class="text-gray-600 dark:text-gray-400 text-sm font-bold uppercase tracking-wider" id="txt-hud-score-1p">Score</p>
+                <p class="text-4xl font-black text-gray-900 dark:text-white" id="score-display-1p">0</p>
             </div>
             
-            <div class="bg-red-600/80 backdrop-blur rounded-xl p-4 border border-red-400 shadow-xl text-center mx-4 flex-1 max-w-[150px]">
-                <p class="text-red-200 text-sm font-bold uppercase tracking-wider">Lives</p>
-                <p class="text-4xl font-black text-white" id="lives-display">3</p>
+            <div class="bg-red-100/90 dark:bg-red-600/80 backdrop-blur rounded-xl p-4 border border-red-400 shadow-xl text-center mx-4 flex-1 max-w-[150px]">
+                <p class="text-red-700 dark:text-red-200 text-sm font-bold uppercase tracking-wider" id="txt-hud-lives-1p">Lives</p>
+                <p class="text-4xl font-black text-red-900 dark:text-white" id="lives-display-1p">3</p>
             </div>
 
-            <div class="bg-indigo-600/80 backdrop-blur rounded-xl p-4 border border-indigo-400 shadow-xl text-right">
-                <p class="text-indigo-200 text-sm font-bold uppercase tracking-wider">Activity</p>
-                <p class="text-2xl font-black text-white"><span id="squats-display">0</span> Squats</p>
-                <p class="text-2xl font-black text-white"><span id="jumps-display">0</span> Jumps</p>
-                <p class="text-lg font-bold text-yellow-400 mt-1"><span id="calories-display">0.0</span> kcal</p>
+            <div class="bg-indigo-100/90 dark:bg-indigo-600/80 backdrop-blur rounded-xl p-4 border border-indigo-400 shadow-xl text-right">
+                <p class="text-indigo-700 dark:text-indigo-200 text-sm font-bold uppercase tracking-wider" id="txt-hud-activity-1p">Activity</p>
+                <p class="text-2xl font-black text-indigo-900 dark:text-white"><span id="squats-display-1p">0</span> <span id="txt-hud-squats-1p">Squats</span></p>
+                <p class="text-2xl font-black text-indigo-900 dark:text-white"><span id="jumps-display-1p">0</span> <span id="txt-hud-jumps-1p">Jumps</span></p>
+                <p class="text-xl font-bold text-orange-600 dark:text-yellow-400 mt-1"><span id="calories-display-1p">0.0</span> kcal</p>
             </div>
         </div>
 
-        <!-- Center Screens (Loading, Calibration, Game Over) -->
+        <!-- 2 PLAYER HUD (Split Screen Design) -->
+        <div class="flex justify-between items-start w-full max-w-6xl mx-auto hidden" id="hud-2p">
+            <div id="hud-p1" class="bg-blue-100/90 dark:bg-blue-900/80 backdrop-blur rounded-xl p-4 border border-blue-400 shadow-xl text-center flex-1 max-w-[200px]">
+                <p class="text-blue-800 dark:text-blue-200 font-bold uppercase tracking-wider text-sm">P1 Lives: <span id="p1-lives-display" class="text-3xl font-black">3</span></p>
+                <div class="flex justify-between mt-2 font-bold text-blue-900 dark:text-white">
+                    <div class="text-left"><span id="p1-squats">0</span> Sq</div>
+                    <div class="text-right"><span id="p1-jumps">0</span> Jmp</div>
+                </div>
+            </div>
+            <div class="bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-xl p-4 border border-gray-300 dark:border-gray-600 shadow-xl text-center mx-4">
+                <p class="text-gray-600 dark:text-gray-400 text-sm font-bold uppercase tracking-wider">Score</p>
+                <p class="text-4xl font-black text-gray-900 dark:text-white" id="score-display-2p">0</p>
+            </div>
+            <div id="hud-p2" class="bg-red-100/90 dark:bg-red-900/80 backdrop-blur rounded-xl p-4 border border-red-400 shadow-xl text-center flex-1 max-w-[200px]">
+                <p class="text-red-800 dark:text-red-200 font-bold uppercase tracking-wider text-sm">P2 Lives: <span id="p2-lives-display" class="text-3xl font-black">3</span></p>
+                <div class="flex justify-between mt-2 font-bold text-red-900 dark:text-white">
+                    <div class="text-left"><span id="p2-squats">0</span> Sq</div>
+                    <div class="text-right"><span id="p2-jumps">0</span> Jmp</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Screens -->
         <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto" id="center-screens">
             
-            <!-- Loading AI -->
-            <div id="loading-screen" class="bg-gray-900/90 p-8 rounded-2xl border border-gray-700 text-center max-w-md backdrop-blur-md">
-                <div class="animate-spin inline-block w-12 h-12 border-[4px] border-current border-t-transparent text-indigo-500 rounded-full mb-4" role="status" aria-label="loading"></div>
-                <h1 class="text-3xl font-black mb-2 bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">Active Runner</h1>
-                <p class="text-gray-300">Loading AI Motion Tracking...</p>
-                <p class="text-sm text-gray-500 mt-4">Please allow camera access when prompted.</p>
-            </div>
+            <!-- 1. LOGIN SCREEN -->
+            <div id="login-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-indigo-500/40 text-center max-w-xl w-[90%] shadow-2xl backdrop-blur-md">
+                
+                <div class="flex flex-col sm:flex-row justify-between gap-4 mb-8 bg-gray-100 dark:bg-gray-800 p-4 rounded-xl">
+                    <select id="lang-select" class="flex-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xl p-3 rounded-lg border-2 border-gray-300 dark:border-gray-500 font-bold cursor-pointer">
+                        <option value="en">English</option>
+                        <option value="mi">Te Reo Māori</option>
+                    </select>
+                    <select id="theme-select" class="flex-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xl p-3 rounded-lg border-2 border-gray-300 dark:border-gray-500 font-bold cursor-pointer">
+                        <option value="dark" id="txt-theme-dark">Dark Theme</option>
+                        <option value="light" id="txt-theme-light">Light Theme</option>
+                    </select>
+                </div>
 
-            <!-- Warning screen (shown before how-to-play) -->
-            <div id="warning-screen" class="bg-gray-900/95 p-7 md:p-10 rounded-2xl border-2 border-amber-500/40 text-left max-w-2xl w-[min(100%,46rem)] backdrop-blur-md hidden shadow-xl">
-                <h2 class="text-4xl md:text-5xl font-black text-amber-300 mb-4">Safety Warning</h2>
-                <p class="text-amber-50/95 text-xl md:text-2xl leading-relaxed mb-5">
-                    Please play in a clear, dry, non-slip area with enough room to move both arms.
-                </p>
-                <ul class="text-amber-100/95 text-lg md:text-xl leading-relaxed space-y-3 mb-6">
-                    <li>Go at your own pace and hold nearby support if needed.</li>
-                    <li>Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.</li>
-                </ul>
-                <button type="button" id="warning-continue-btn" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold py-4 md:py-5 px-6 rounded-xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-2xl md:text-3xl w-full">
-                    I understand—show how to play
+                <h1 id="txt-welcome" class="text-4xl font-black mb-4 text-gray-900 dark:text-white">Welcome to Active Runner</h1>
+                <p id="txt-instruction" class="text-2xl text-gray-700 dark:text-gray-300 mb-8 font-semibold">Please enter your name to begin.</p>
+                
+                <input type="text" id="player-name" placeholder="Your Name" class="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-3xl p-5 rounded-xl border-4 border-gray-300 dark:border-gray-600 mb-8 text-center font-bold" />
+                
+                <button type="button" id="btn-continue" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl w-full">
+                    Continue
                 </button>
             </div>
 
-            <!-- Instructions: graphic scales to fit viewport—no scroll -->
-            <div id="instruction-screen" class="bg-gray-900/95 flex flex-col min-h-0 max-h-[calc(100dvh-1.25rem)] h-[calc(100dvh-1.25rem)] w-[min(100%,48rem)] max-w-3xl p-3 sm:p-4 md:p-5 rounded-2xl border-2 border-indigo-500/40 text-center overflow-hidden backdrop-blur-md hidden shadow-xl">
-                <div class="shrink-0">
-                    <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-0.5">Active Runner</h2>
-                    <p class="text-indigo-300 text-base sm:text-lg md:text-xl font-semibold mb-2">How to play</p>
+            <!-- 2. DASHBOARD SCREEN -->
+            <div id="dashboard-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-indigo-500/40 text-center max-w-3xl w-[95%] shadow-2xl backdrop-blur-md hidden mt-4 mb-4">
+                <h1 id="txt-hello" class="text-4xl md:text-5xl font-black mb-6 text-gray-900 dark:text-white">Hello, </h1>
+                
+                <div class="flex flex-col md:flex-row gap-6 mb-8">
+                    <div class="flex-1 bg-blue-50 dark:bg-blue-900/30 border-4 border-blue-400 p-6 rounded-2xl flex flex-col justify-center">
+                        <h2 id="txt-streak-title" class="text-2xl font-bold text-blue-800 dark:text-blue-300 mb-2">Daily Login Streak</h2>
+                        <div class="text-6xl font-black text-blue-600 dark:text-blue-400 flex justify-center items-center gap-4">
+                            <span>🔥</span> <span id="streak-number">1</span> <span>🔥</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 flex flex-col gap-4">
+                        <div class="flex justify-center gap-2">
+                            <button id="btn-mode-1p" class="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-xl border-4 border-indigo-400 transform transition">1 Player</button>
+                            <button id="btn-mode-2p" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-3 rounded-xl border-4 border-transparent transform transition">2 Player</button>
+                        </div>
+                        <button id="btn-play" class="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-black py-6 px-8 rounded-2xl shadow-xl transform transition hover:scale-105 active:scale-95 text-3xl flex flex-col justify-center items-center gap-2">
+                            <span id="txt-play-btn">Start Camera & Play</span>
+                            <span class="text-lg font-bold opacity-80" id="txt-play-sub">Get ready to move!</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="flex-1 min-h-0 flex items-center justify-center py-1">
-                    <img src="instruction.png" alt="Instructions for Active Runner: camera position, lane changes, jump, duck, obstacles, and calibration." class="max-h-full max-w-full h-auto w-auto object-contain rounded-lg border border-indigo-500/40 shadow-lg select-none" loading="eager" decoding="async">
+
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 border-2 border-gray-200 dark:border-gray-700">
+                    <h2 id="txt-leaderboard" class="text-3xl font-black mb-4 text-gray-800 dark:text-gray-200 text-left border-b-2 border-gray-300 dark:border-gray-600 pb-2">Top Players</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xl">
+                            <thead>
+                                <tr class="text-gray-500 dark:text-gray-400 border-b border-gray-300 dark:border-gray-600">
+                                    <th id="txt-rank" class="p-3 font-bold">Rank</th>
+                                    <th id="txt-name" class="p-3 font-bold">Name</th>
+                                    <th id="txt-score" class="p-3 font-bold">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboard-body" class="text-gray-800 dark:text-gray-200 font-semibold">
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <button type="button" id="instruction-continue-btn" class="shrink-0 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white font-bold py-3 sm:py-4 px-6 rounded-xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-xl sm:text-2xl w-full">
-                    I understand—continue
+            </div>
+
+            <!-- Loading AI -->
+            <div id="loading-screen" class="bg-white/95 dark:bg-gray-900/90 p-8 rounded-3xl border-4 border-gray-300 dark:border-gray-700 text-center max-w-md w-[90%] backdrop-blur-md hidden shadow-2xl">
+                <div class="animate-spin inline-block w-16 h-16 border-[6px] border-current border-t-transparent text-indigo-600 dark:text-indigo-500 rounded-full mb-6"></div>
+                <h1 class="text-4xl font-black mb-4 bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400 bg-clip-text text-transparent">Active Runner</h1>
+                <p id="txt-loading-ai" class="text-2xl text-gray-700 dark:text-gray-300 font-bold">Loading AI Engine...</p>
+                <p id="txt-loading-sub" class="text-lg text-gray-500 mt-4 font-semibold">Please allow camera access when prompted.</p>
+            </div>
+
+            <!-- Warning screen -->
+            <div id="warning-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 md:p-10 rounded-3xl border-4 border-amber-500/60 text-left max-w-2xl w-[90%] backdrop-blur-md hidden shadow-2xl">
+                <h2 id="txt-warning-title" class="text-4xl md:text-5xl font-black text-amber-600 dark:text-amber-400 mb-6 border-b-2 border-amber-200 dark:border-amber-900 pb-2">Safety Warning</h2>
+                <p id="txt-warning-1" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-6">
+                    Please play in a clear, dry, non-slip area with enough room to move both arms.
+                </p>
+                <ul class="text-gray-700 dark:text-amber-100/95 text-xl font-medium leading-relaxed space-y-4 mb-8 list-disc pl-6">
+                    <li id="txt-warning-2">Go at your own pace and hold nearby support if needed.</li>
+                    <li id="txt-warning-3">Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.</li>
+                </ul>
+                <button type="button" id="warning-continue-btn" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-black py-5 px-6 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-2xl md:text-3xl w-full">
+                    I understand
                 </button>
             </div>
 
             <!-- Start / Calibrate -->
-            <div id="start-screen" class="bg-gray-900/90 p-8 rounded-2xl border border-gray-700 text-center max-w-md backdrop-blur-md hidden">
-                <h1 class="text-3xl font-black mb-4">Ready to move?</h1>
-                <p class="text-gray-300 mb-6">Step back so your upper body is visible. Stand still in the center to calibrate.</p>
-                <button id="start-btn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 text-xl w-full">
+            <div id="start-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl border-4 border-green-500/50 text-center max-w-lg w-[90%] backdrop-blur-md hidden shadow-2xl">
+                <h1 id="txt-ready" class="text-5xl font-black mb-6 text-gray-900 dark:text-white">Ready to move?</h1>
+                <p id="txt-ready-sub" class="text-2xl text-gray-700 dark:text-gray-300 mb-8 font-semibold">Step back so your upper body is visible. Stand still in the center to calibrate.</p>
+                <button id="start-btn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-black py-6 px-8 rounded-2xl shadow-lg transform transition hover:scale-105 active:scale-95 text-3xl w-full">
                     Start Calibration
                 </button>
             </div>
 
             <!-- Calibration Progress -->
-            <div id="calibration-screen" class="bg-gray-900/90 p-8 rounded-2xl border border-gray-700 text-center max-w-md backdrop-blur-md hidden">
-                <h2 class="text-2xl font-bold mb-4 text-yellow-400">Stand Still...</h2>
-                <div class="w-full bg-gray-700 rounded-full h-4 mb-4">
-                    <div id="calibration-bar" class="bg-yellow-400 h-4 rounded-full transition-all duration-100" style="width: 0%"></div>
+            <div id="calibration-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl border-4 border-yellow-500/50 text-center max-w-lg w-[90%] backdrop-blur-md hidden shadow-2xl">
+                <h2 id="txt-stand-still" class="text-4xl font-black mb-6 text-yellow-600 dark:text-yellow-400">Stand Still...</h2>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-8 mb-6 border-2 border-gray-300 dark:border-gray-600">
+                    <div id="calibration-bar" class="bg-yellow-400 h-full rounded-full transition-all duration-100" style="width: 0%"></div>
                 </div>
-                <p class="text-gray-300">Learning your neutral pose.</p>
+                <p id="txt-learning" class="text-2xl text-gray-700 dark:text-gray-300 font-bold">Learning your neutral pose.</p>
             </div>
 
             <!-- Game Over / Doing Great -->
-            <div id="game-over-screen" class="bg-gray-900/95 p-8 rounded-2xl border border-green-500/50 text-center max-w-md backdrop-blur-md hidden shadow-[0_0_50px_rgba(34,197,94,0.3)]">
-                <h1 class="text-4xl font-black mb-2 text-green-400">You are doing great!</h1>
-                <p class="text-xl font-bold text-white mb-4">Score: <span id="final-score" class="text-indigo-400">0</span></p>
+            <div id="game-over-screen" class="bg-white/95 dark:bg-gray-900/95 p-10 rounded-3xl border-4 border-green-500/60 text-center max-w-2xl w-[90%] backdrop-blur-md hidden shadow-[0_0_50px_rgba(34,197,94,0.3)]">
+                <h1 id="txt-game-over" class="text-5xl font-black mb-4 text-green-600 dark:text-green-400">You are doing great!</h1>
+                <p class="text-3xl font-black text-gray-800 dark:text-white mb-8 border-b-2 border-gray-200 dark:border-gray-700 pb-4"><span id="txt-final-score">Score:</span> <span id="final-score" class="text-indigo-600 dark:text-indigo-400 text-4xl">0</span></p>
                 
-                <div class="flex justify-around mb-6 bg-gray-800 p-4 rounded-xl">
-                    <div>
-                        <p class="text-gray-400 text-xs uppercase">Squats</p>
-                        <p class="text-xl font-bold" id="final-squats">0</p>
+                <div class="flex flex-col sm:flex-row justify-around gap-4 mb-8">
+                    <!-- P1 Stats -->
+                    <div class="flex-1 bg-blue-50 dark:bg-blue-900/40 p-6 rounded-2xl border border-blue-300 dark:border-blue-700">
+                        <p class="text-blue-800 dark:text-blue-300 font-black text-xl mb-4 uppercase">Player 1</p>
+                        <div class="flex justify-between text-lg font-bold">
+                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">SQUATS</span> <span id="final-p1-squats" class="text-3xl">0</span></div>
+                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">JUMPS</span> <span id="final-p1-jumps" class="text-3xl">0</span></div>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-gray-400 text-xs uppercase">Jumps</p>
-                        <p class="text-xl font-bold" id="final-jumps">0</p>
-                    </div>
-                    <div>
-                        <p class="text-gray-400 text-xs uppercase">Energy</p>
-                        <p class="text-xl font-bold text-yellow-400"><span id="final-calories">0.0</span><span class="text-xs">kcal</span></p>
+                    <!-- P2 Stats -->
+                    <div id="final-p2-container" class="hidden flex-1 bg-red-50 dark:bg-red-900/40 p-6 rounded-2xl border border-red-300 dark:border-red-700">
+                        <p class="text-red-800 dark:text-red-300 font-black text-xl mb-4 uppercase">Player 2</p>
+                        <div class="flex justify-between text-lg font-bold">
+                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">SQUATS</span> <span id="final-p2-squats" class="text-3xl">0</span></div>
+                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">JUMPS</span> <span id="final-p2-jumps" class="text-3xl">0</span></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="bg-blue-900/40 p-4 rounded-xl mb-6 border border-blue-500/30 text-left">
-                    <p class="text-blue-300 text-xs font-bold uppercase mb-1">Did you know?</p>
-                    <p class="text-sm text-gray-200 italic" id="health-fact">...</p>
-                </div>
-
-                <button id="restart-btn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 text-xl w-full">
-                    Keep Moving!
+                <button id="restart-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl w-full">
+                    Return to Dashboard
                 </button>
             </div>
 
@@ -150,346 +241,418 @@
         
         <!-- Level Up Overlay -->
         <div id="level-up-overlay" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none hidden z-50">
-            <h1 class="text-7xl font-black mb-4 text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,1)] animate-bounce uppercase italic tracking-widest">Level Up!</h1>
-            <p id="level-prompt-text" class="text-3xl font-bold text-white bg-indigo-900/90 px-10 py-5 rounded-2xl backdrop-blur-md border-2 border-indigo-400 shadow-2xl text-center"></p>
-        </div>
-
-        <!-- Pose Debug Text (Bottom Left) -->
-        <div id="debug-text" class="absolute bottom-6 left-6 text-xs text-gray-500 font-mono hidden">
-            Pose Data...
+            <h1 class="text-7xl md:text-9xl font-black mb-6 text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,1)] animate-bounce uppercase italic tracking-widest">Level Up!</h1>
+            <p id="level-prompt-text" class="text-4xl font-black text-white bg-indigo-900/95 px-12 py-6 rounded-3xl backdrop-blur-md border-4 border-indigo-400 shadow-2xl text-center"></p>
         </div>
     </div>
 </div>
 
 <script>
 /**
- * CORE GAME STATE & VARIABLES
+ * UI STATE & TRANSLATIONS
+ */
+let currentPlayerName = "Guest";
+let isCameraInitialized = false;
+let numPlayers = 1;
+
+const translations = {
+    en: {
+        themeDark: "Dark Theme", themeLight: "Light Theme",
+        welcome: "Welcome to Active Runner", instruction: "Please enter your name to begin.",
+        placeholder: "Your Name", continueBtn: "Continue",
+        hello: "Hello, ", streakTitle: "Daily Login Streak",
+        playBtn: "Start Camera & Play", playSub: "Get ready to move!",
+        leaderboard: "Top Players", rank: "Rank", name: "Name", score: "Score",
+        loadingAi: "Loading AI Engine...", loadingSub: "Please allow camera access when prompted.",
+        warningTitle: "Safety Warning", warning1: "Please play in a clear, dry, non-slip area with enough room to move both arms.",
+        warning2: "Go at your own pace and hold nearby support if needed.", warning3: "Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.",
+        warningBtn: "I understand", ready: "Ready to move?",
+        readySub: "Step back so your upper body is visible. Stand still in the center to calibrate.",
+        startCalBtn: "Start Calibration", standStill: "Stand Still...", learning: "Learning your neutral pose.",
+        gameOver: "Great Job!", finalScore: "Score: ", returnDash: "Return to Dashboard",
+        hudScore1p: "Score", hudLives1p: "Lives", hudActivity1p: "Activity", hudSquats1p: "Squats", hudJumps1p: "Jumps"
+    },
+    mi: {
+        themeDark: "Kupu Pōuri (Dark)", themeLight: "Kupu Mārama (Light)",
+        welcome: "Nau mai ki Active Runner", instruction: "Tuhia tō ingoa ki konei.",
+        placeholder: "Tō Ingoa", continueBtn: "Haere Tonu",
+        hello: "Tēnā koe, ", streakTitle: "Rā Takiuru (Streak)",
+        playBtn: "Tīmata te Kāmera", playSub: "Kia rite ki te korikori!",
+        leaderboard: "Ngā Toa o te Kēmu", rank: "Tūranga", name: "Ingoa", score: "Kaute",
+        loadingAi: "E uta ana te Kāmera...", loadingSub: "Tukuna koa te kāmera kia kā.",
+        warningTitle: "Whakatūpato Haumaru", warning1: "Me tākaro ki tētahi wāhi wātea, maroke.",
+        warning2: "Kia tau te haere, puritia tētahi tūāpapa mehemea e tika ana.", warning3: "Kāti ināianei tonu mehemea ka pōrangi te māhunga, ka mamae rānei.",
+        warningBtn: "Kua mārama ahau", ready: "Kua reri?",
+        readySub: "Hoki whakamuri kia kitea te tinana. Tū mārie i waenganui.",
+        startCalBtn: "Tīmata", standStill: "Tū Mārie...", learning: "E ako ana i tō tūnga.",
+        gameOver: "Ka Rawe!", finalScore: "Kaute: ", returnDash: "Hoki ki te Pīhono",
+        hudScore1p: "Kaute", hudLives1p: "Oranga", hudActivity1p: "Mahi", hudSquats1p: "Piko", hudJumps1p: "Peke"
+    }
+};
+
+const elementsToTranslate = {
+    'txt-theme-dark': 'themeDark', 'txt-theme-light': 'themeLight',
+    'txt-welcome': 'welcome', 'txt-instruction': 'instruction',
+    'btn-continue': 'continueBtn', 'txt-hello': 'hello', 'txt-streak-title': 'streakTitle',
+    'txt-play-btn': 'playBtn', 'txt-play-sub': 'playSub', 'txt-leaderboard': 'leaderboard',
+    'txt-rank': 'rank', 'txt-name': 'name', 'txt-score': 'score',
+    'txt-loading-ai': 'loadingAi', 'txt-loading-sub': 'loadingSub',
+    'txt-warning-title': 'warningTitle', 'txt-warning-1': 'warning1',
+    'txt-warning-2': 'warning2', 'txt-warning-3': 'warning3', 'warning-continue-btn': 'warningBtn', 
+    'txt-ready': 'ready', 'txt-ready-sub': 'readySub', 'start-btn': 'startCalBtn',
+    'txt-stand-still': 'standStill', 'txt-learning': 'learning',
+    'txt-game-over': 'gameOver', 'txt-final-score': 'finalScore',
+    'restart-btn': 'returnDash',
+    'txt-hud-score-1p': 'hudScore1p', 'txt-hud-lives-1p': 'hudLives1p', 'txt-hud-activity-1p': 'hudActivity1p',
+    'txt-hud-squats-1p': 'hudSquats1p', 'txt-hud-jumps-1p': 'hudJumps1p'
+};
+
+function updateLanguage(lang) {
+    const dict = translations[lang];
+    for (const [id, key] of Object.entries(elementsToTranslate)) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = dict[key];
+    }
+    document.getElementById('player-name').placeholder = dict.placeholder;
+    if (!document.getElementById('dashboard-screen').classList.contains('hidden')) {
+        document.getElementById('txt-hello').textContent = dict.hello + currentPlayerName + "!";
+    }
+    localStorage.setItem('game_lang', lang);
+}
+
+function updateTheme(theme) {
+    const htmlEl = document.documentElement;
+    if (theme === 'dark') htmlEl.classList.add('dark');
+    else htmlEl.classList.remove('dark');
+    localStorage.setItem('game_theme', theme);
+    if(gameState === 'loading' || gameState === 'login' || gameState === 'dashboard') drawStaticBackground();
+}
+
+function calculateStreak() {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    let lastLogin = localStorage.getItem('last_login_date');
+    let currentStreak = parseInt(localStorage.getItem('current_streak')) || 0;
+
+    if (lastLogin !== todayStr) {
+        let yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (lastLogin === yesterday.toISOString().split('T')[0]) currentStreak += 1;
+        else currentStreak = 1;
+        localStorage.setItem('last_login_date', todayStr);
+        localStorage.setItem('current_streak', currentStreak);
+    }
+    document.getElementById('streak-number').textContent = currentStreak;
+}
+
+function getLeaderboard() {
+    const defaultBoard = [
+        { name: "WaikatoChamp", score: 850 }, { name: "Sarah123", score: 620 }, { name: "TeKauri", score: 430 }
+    ];
+    const stored = localStorage.getItem('game_leaderboard');
+    return stored ? JSON.parse(stored) : defaultBoard;
+}
+
+function saveScore(newScore) {
+    if (newScore <= 0) return;
+    let board = getLeaderboard();
+    board.push({ name: currentPlayerName, score: Math.floor(newScore) });
+    board.sort((a, b) => b.score - a.score);
+    board = board.slice(0, 5);
+    localStorage.setItem('game_leaderboard', JSON.stringify(board));
+    renderLeaderboard();
+}
+
+function renderLeaderboard() {
+    const tbody = document.getElementById('leaderboard-body');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    const board = getLeaderboard();
+    board.forEach((player, index) => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-gray-200 dark:border-gray-700 last:border-0";
+        tr.innerHTML = `<td class="p-4 text-2xl">#${index + 1}</td>
+                        <td class="p-4 text-2xl font-black">${player.name}</td>
+                        <td class="p-4 text-2xl text-indigo-600 dark:text-indigo-400 font-bold">${player.score}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+/**
+ * CORE GAME STATE
  */
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
-
-let gameWidth = window.innerWidth;
-let gameHeight = window.innerHeight;
-canvas.width = gameWidth;
-canvas.height = gameHeight;
+let gameWidth = window.innerWidth, gameHeight = window.innerHeight;
+canvas.width = gameWidth; canvas.height = gameHeight;
 
 window.addEventListener('resize', () => {
-    gameWidth = window.innerWidth;
-    gameHeight = window.innerHeight;
-    canvas.width = gameWidth;
-    canvas.height = gameHeight;
+    gameWidth = window.innerWidth; gameHeight = window.innerHeight;
+    canvas.width = gameWidth; canvas.height = gameHeight;
+    if(gameState === 'login' || gameState === 'dashboard') drawStaticBackground();
 });
 
-// Game States: loading, start, calibrating, playing, gameover
-let gameState = 'loading'; 
+let gameState = 'login'; 
+let score = 0, speed = 4, frameCount = 0, obstacles = [], gameLoopId;
+let levelUpTimer = 0, nextMilestone = 100;
+const CALIBRATION_REQUIRED_FRAMES = 60; 
 
-// Gameplay variables
-let score = 0;
-let speed = 4;
-let frameCount = 0;
-let obstacles = [];
-let gameLoopId;
-let lives = 3;
-let invulnerableFrames = 0;
-let nextLifeScore = 100;
-let levelUpTimer = 0;
-let nextMilestone = 100;
-
-// Stats
-let stats = { squats: 0, jumps: 0 };
-let calories = 0.0;
-const healthFacts = [
-    "Squatting strengthens your core and lower body, improving overall balance and posture.",
-    "Jumping movements build bone density and increase lower body muscle power.",
-    "Just 10 minutes of active gaming can elevate your heart rate to the equivalent of a brisk walk.",
-    "Crossing your midline (moving side-to-side) helps connect the left and right hemispheres of your brain.",
-    "Short bursts of exercise throughout the day can significantly boost your mood and mental focus.",
-    "Raising your arms above your head engages your shoulder stabilizers and upper back muscles."
+// Initializing Advanced Animated Player State Variables
+let players = [
+    { active: true, lives: 3, lane: 0, baseline: 0, calibrationFrames: 0, stats: { squats: 0, jumps: 0 }, actionCooldown: 0, isJumping: false, isSquatting: false, invulnerableFrames: 0, renderX: undefined, renderYOffset: 0, renderScaleX: 1, renderScaleY: 1, renderAngle: 0, renderArmL: undefined, renderArmR: undefined },
+    { active: false, lives: 3, lane: 0, baseline: 0, calibrationFrames: 0, stats: { squats: 0, jumps: 0 }, actionCooldown: 0, isJumping: false, isSquatting: false, invulnerableFrames: 0, renderX: undefined, renderYOffset: 0, renderScaleX: 1, renderScaleY: 1, renderAngle: 0, renderArmL: undefined, renderArmR: undefined }
 ];
 
-// Player tracking
-const lanes = [-1, 0, 1]; // Left, Center, Right
-let currentLane = 0; 
-let isSquatting = false;
-let isJumping = false;
-let actionCooldown = 0; // Prevent rapid erratic switching
-
-// AI & Pose Baseline
-let baseline = { y: null };
-let calibrationFrames = 0;
-const CALIBRATION_REQUIRED_FRAMES = 60; // Approx 2 seconds at 30fps
-
-// Audio Setup
 const bgMusic = document.getElementById('bg-music');
 bgMusic.volume = 0.4;
-const playlist = [
-    "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-    "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
-];
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSynth(type) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const now = audioCtx.currentTime;
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.connect(g).connect(audioCtx.destination);
+    g.gain.value = 0.15; let duration = 0.18;
+    if (type === 'lane') { o.type = 'sine'; o.frequency.setValueAtTime(660, now); o.frequency.linearRampToValueAtTime(880, now + duration); } 
+    else if (type === 'jump') { o.type = 'triangle'; o.frequency.setValueAtTime(440, now); o.frequency.linearRampToValueAtTime(1320, now + 0.22); duration = 0.22; } 
+    else if (type === 'squat') { o.type = 'triangle'; o.frequency.setValueAtTime(660, now); o.frequency.linearRampToValueAtTime(220, now + 0.22); duration = 0.22; } 
+    else if (type === 'hit') { o.type = 'sawtooth'; o.frequency.setValueAtTime(110, now); o.frequency.linearRampToValueAtTime(55, now + 0.18); g.gain.setValueAtTime(0.2, now); g.gain.linearRampToValueAtTime(0, now + 0.18); } 
+    else if (type === 'levelup') { o.type = 'square'; o.frequency.setValueAtTime(880, now); o.frequency.linearRampToValueAtTime(1760, now + 0.25); duration = 0.25; }
+    o.start(now); o.stop(now + duration);
+    o.onended = () => { o.disconnect(); g.disconnect(); };
+}
 
 /**
- * AI / MEDIAPIPE POSE SETUP
+ * AI / MEDIAPIPE (Tasks Vision API - Dynamically Loaded)
  */
 const videoElement = document.getElementById('webcam-video');
-const pose = new Pose({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
-});
+let poseLandmarker = null;
+let lastVideoTime = -1;
+let visionModule = null;
 
-pose.setOptions({
-    modelComplexity: 1,
-    smoothLandmarks: true,
-    enableSegmentation: false,
-    minDetectionConfidence: 0.5,
-    minTrackingConfidence: 0.5
-});
+async function initCameraSequence() {
+    if (!poseLandmarker) {
+        try {
+            try {
+                visionModule = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm");
+            } catch (e) {
+                visionModule = await import("https://cdn.skypack.dev/@mediapipe/tasks-vision@0.10.3");
+            }
+            const visionTask = await visionModule.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
+            poseLandmarker = await visionModule.PoseLandmarker.createFromOptions(visionTask, {
+                baseOptions: {
+                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+                    delegate: "GPU"
+                },
+                runningMode: "VIDEO",
+                numPoses: 2
+            });
+        } catch(e) { 
+            console.error("AI Load Error:", e);
+            alert("Failed to load AI engine. Please check your internet connection.");
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            return;
+        }
+    }
 
-pose.onResults(onPoseResults);
-
-const camera = new Camera(videoElement, {
-    onFrame: async () => {
-        await pose.send({image: videoElement});
-    },
-    width: 640,
-    height: 480
-});
-
-// Start camera. This resolves when the first frame is processed.
-camera.start().then(() => {
-    // Model is loaded and camera is active
+    if (!isCameraInitialized) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+            videoElement.srcObject = stream;
+            videoElement.addEventListener("loadeddata", predictWebcam);
+            isCameraInitialized = true;
+        } catch (err) {
+            alert("Camera access is required. Please check your browser permissions.");
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            return;
+        }
+    }
+    
     document.getElementById('loading-screen').classList.add('hidden');
     document.getElementById('warning-screen').classList.remove('hidden');
-    gameState = 'start';
-    drawBackground(); // Draw initial static background
+    videoElement.classList.remove('hidden');
+}
+
+function predictWebcam() {
+    if (gameState === 'playing' || gameState === 'calibrating') {
+        let startTimeMs = performance.now();
+        if (lastVideoTime !== videoElement.currentTime && poseLandmarker) {
+            lastVideoTime = videoElement.currentTime;
+            const results = poseLandmarker.detectForVideo(videoElement, startTimeMs);
+            onPoseResults(results);
+        }
+    }
+    if (isCameraInitialized) {
+        requestAnimationFrame(predictWebcam);
+    }
+}
+
+function onPoseResults(results) {
+    if (!results.landmarks || results.landmarks.length === 0) return;
+    let poses = [...results.landmarks];
+    poses.sort((a, b) => b[0].x - a[0].x);
+
+    if (gameState === 'calibrating') {
+        if (poses.length < numPlayers) {
+            document.getElementById('txt-learning').innerText = `Waiting for ${numPlayers} player(s) to be in frame...`;
+            return;
+        }
+        document.getElementById('txt-learning').innerText = "Learning your neutral pose...";
+        
+        let validFrames = 0;
+        for (let i = 0; i < numPlayers; i++) {
+            let avgShoulderY = (poses[i][11].y + poses[i][12].y) / 2;
+            players[i].baseline += avgShoulderY;
+            players[i].calibrationFrames++;
+            validFrames = players[i].calibrationFrames;
+        }
+        document.getElementById('calibration-bar').style.width = `${(validFrames/CALIBRATION_REQUIRED_FRAMES)*100}%`;
+        
+        if (validFrames >= CALIBRATION_REQUIRED_FRAMES) {
+            for (let i = 0; i < numPlayers; i++) players[i].baseline /= CALIBRATION_REQUIRED_FRAMES;
+            startGameplay();
+        }
+    } else if (gameState === 'playing') {
+        for (let i = 0; i < numPlayers; i++) {
+            if (poses[i] && players[i].lives > 0) handlePlayerMovement(players[i], poses[i]);
+        }
+    }
+}
+
+function handlePlayerMovement(player, landmarks) {
+    if (player.actionCooldown > 0) player.actionCooldown--;
+    const squatThreshold = 0.10, armLevelThreshold = 0.15, armsUpThreshold = -0.15;
+    
+    let wasSquatting = player.isSquatting, wasJumping = player.isJumping;
+    player.isSquatting = false; player.isJumping = false;
+
+    const leftShoulder = landmarks[11], rightShoulder = landmarks[12];
+    const leftWrist = landmarks[15], rightWrist = landmarks[16];
+    const shoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+
+    const leftArmRaised = leftWrist.y < leftShoulder.y + armLevelThreshold;
+    const rightArmRaised = rightWrist.y < rightShoulder.y + armLevelThreshold;
+    const bothArmsUp = leftWrist.y < leftShoulder.y + armsUpThreshold && rightWrist.y < rightShoulder.y + armsUpThreshold;
+    const bothArmsLevel = leftArmRaised && rightArmRaised && !bothArmsUp;
+
+    if (bothArmsUp) {
+        player.isJumping = true;
+        if (!wasJumping) { player.stats.jumps++; updateHUD(); playSynth('jump'); }
+    } else if (bothArmsLevel || shoulderY > player.baseline + squatThreshold) {
+        player.isSquatting = true;
+        if (!wasSquatting) { player.stats.squats++; updateHUD(); playSynth('squat'); }
+    }
+
+    if (player.actionCooldown === 0 && !player.isSquatting && !player.isJumping) {
+        if (leftArmRaised && !rightArmRaised) {
+            if (player.lane > -1) { player.lane--; player.actionCooldown = 20; playSynth('lane'); }
+        } else if (rightArmRaised && !leftArmRaised) {
+            if (player.lane < 1) { player.lane++; player.actionCooldown = 20; playSynth('lane'); }
+        }
+    }
+}
+
+/**
+ * UI EVENT LISTENERS
+ */
+document.getElementById('lang-select').addEventListener('change', (e) => updateLanguage(e.target.value));
+document.getElementById('theme-select').addEventListener('change', (e) => updateTheme(e.target.value));
+
+document.getElementById('btn-mode-1p').addEventListener('click', () => {
+    numPlayers = 1; players[1].active = false;
+    document.getElementById('btn-mode-1p').classList.replace('border-transparent', 'border-indigo-400');
+    document.getElementById('btn-mode-1p').classList.replace('bg-gray-200', 'bg-indigo-600');
+    document.getElementById('btn-mode-1p').classList.replace('text-gray-800', 'text-white');
+    document.getElementById('btn-mode-2p').classList.replace('border-indigo-400', 'border-transparent');
+    document.getElementById('btn-mode-2p').classList.replace('bg-indigo-600', 'bg-gray-200');
+    document.getElementById('btn-mode-2p').classList.replace('text-white', 'text-gray-800');
+});
+
+document.getElementById('btn-mode-2p').addEventListener('click', () => {
+    numPlayers = 2; players[1].active = true;
+    document.getElementById('btn-mode-2p').classList.replace('border-transparent', 'border-indigo-400');
+    document.getElementById('btn-mode-2p').classList.replace('bg-gray-200', 'bg-indigo-600');
+    document.getElementById('btn-mode-2p').classList.replace('text-gray-800', 'text-white');
+    document.getElementById('btn-mode-1p').classList.replace('border-indigo-400', 'border-transparent');
+    document.getElementById('btn-mode-1p').classList.replace('bg-indigo-600', 'bg-gray-200');
+    document.getElementById('btn-mode-1p').classList.replace('text-white', 'text-gray-800');
+});
+
+document.getElementById('btn-continue').addEventListener('click', () => {
+    const name = document.getElementById('player-name').value.trim();
+    if (!name) {
+        const lang = document.getElementById('lang-select').value;
+        alert(lang === 'mi' ? 'Kuhuna tō ingoa koa.' : 'Please enter your name.');
+        return;
+    }
+    currentPlayerName = name;
+    localStorage.setItem('player_name', name);
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('dashboard-screen').classList.remove('hidden');
+    gameState = 'dashboard';
+    updateLanguage(document.getElementById('lang-select').value);
+    calculateStreak();
+    renderLeaderboard();
+});
+
+document.getElementById('btn-play').addEventListener('click', () => {
+    document.getElementById('dashboard-screen').classList.add('hidden');
+    document.getElementById('loading-screen').classList.remove('hidden');
+    gameState = 'loading';
+    initCameraSequence();
 });
 
 document.getElementById('warning-continue-btn').addEventListener('click', () => {
     document.getElementById('warning-screen').classList.add('hidden');
-    document.getElementById('instruction-screen').classList.remove('hidden');
-});
-
-document.getElementById('instruction-continue-btn').addEventListener('click', () => {
-    document.getElementById('instruction-screen').classList.add('hidden');
     document.getElementById('start-screen').classList.remove('hidden');
 });
 
-/**
- * POSE PROCESSING LOGIC
- */
-function onPoseResults(results) {
-    if (!results.poseLandmarks) return;
-
-    // Get keypoints
-    const leftShoulder = results.poseLandmarks[11];
-    const rightShoulder = results.poseLandmarks[12];
-    const leftWrist = results.poseLandmarks[15];
-    const rightWrist = results.poseLandmarks[16];
-    
-    // Average shoulder Y (0 is top of image, 1 is bottom)
-    const avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
-
-    // Debug info
-    document.getElementById('debug-text').innerText = 
-        `Y: ${avgShoulderY.toFixed(2)} | Baseline Y: ${baseline.y ? baseline.y.toFixed(2) : 'N/A'}`;
-
-    if (gameState === 'calibrating') {
-        // Accumulate baseline
-        if (!baseline.y) { baseline.y = 0; }
-        baseline.y += avgShoulderY;
-        calibrationFrames++;
-        
-        document.getElementById('calibration-bar').style.width = `${(calibrationFrames/CALIBRATION_REQUIRED_FRAMES)*100}%`;
-
-        if (calibrationFrames >= CALIBRATION_REQUIRED_FRAMES) {
-            baseline.y /= CALIBRATION_REQUIRED_FRAMES;
-            startGameplay();
-        }
-    } else if (gameState === 'playing') {
-        handlePlayerMovement(leftWrist, rightWrist, leftShoulder, rightShoulder, avgShoulderY);
-    }
-}
-
-function handlePlayerMovement(leftWrist, rightWrist, leftShoulder, rightShoulder, shoulderY) {
-    if (actionCooldown > 0) actionCooldown--;
-
-    // THRESHOLDS for movement
-    const squatThreshold = 0.10; // Y axis drops (value increases)
-    
-    // Arm movement thresholds relative to shoulder
-    const armLevelThreshold = 0.15; // Wrist is roughly level with shoulder
-    const armsUpThreshold = -0.15;  // Wrist is significantly above shoulder
-
-    // Reset jump/squat states
-    let wasSquatting = isSquatting;
-    let wasJumping = isJumping;
-    
-    isSquatting = false;
-    isJumping = false;
-
-    // Check Arm Positions
-    const leftArmRaised = leftWrist.y < leftShoulder.y + armLevelThreshold;
-    const rightArmRaised = rightWrist.y < rightShoulder.y + armLevelThreshold;
-    const bothArmsUp = leftWrist.y < leftShoulder.y + armsUpThreshold && rightWrist.y < rightShoulder.y + armsUpThreshold;
-    
-    // Check if both arms are level (T-pose) but not raised all the way up for a jump
-    const bothArmsLevel = leftArmRaised && rightArmRaised && !bothArmsUp;
-
-    // 1. Check Vertical Actions (Squat/Jump)
-    if (bothArmsUp) {
-        isJumping = true;
-        if (!wasJumping) { stats.jumps++; updateHUD(); }
-    } else if (bothArmsLevel || shoulderY > baseline.y + squatThreshold) {
-        // Squat triggers if you physically duck OR if you level both arms!
-        isSquatting = true;
-        if (!wasSquatting) { stats.squats++; updateHUD(); }
-    }
-
-    // 2. Check Horizontal Actions (Level Left / Level Right)
-    if (actionCooldown === 0 && !isSquatting && !isJumping) {
-        if (leftArmRaised && !rightArmRaised) {
-            // Move Left
-            if (currentLane > -1) {
-                currentLane--;
-                actionCooldown = 20; // Wait before allowing another shift
-            }
-        } else if (rightArmRaised && !leftArmRaised) {
-            // Move Right
-            if (currentLane < 1) {
-                currentLane++;
-                actionCooldown = 20;
-            }
-        }
-    }
-}
-
-/**
- * UI CONTROLS
- */
 document.getElementById('start-btn').addEventListener('click', () => {
-    // Unlock audio on immediate user click to bypass browser autoplay restrictions
-    bgMusic.play().then(() => {
-        bgMusic.pause();
-        bgMusic.currentTime = 0;
-    }).catch(e => console.log("Audio unlock failed:", e));
-
+    audioCtx.resume();
+    bgMusic.play().then(() => { bgMusic.pause(); bgMusic.currentTime = 0; }).catch(e => console.log(e));
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('calibration-screen').classList.remove('hidden');
     gameState = 'calibrating';
-    baseline = { y: null };
-    calibrationFrames = 0;
+    for (let i=0; i<numPlayers; i++) { players[i].baseline = 0; players[i].calibrationFrames = 0; }
+    document.getElementById('calibration-bar').style.width = '0%';
 });
 
 document.getElementById('restart-btn').addEventListener('click', () => {
     document.getElementById('game-over-screen').classList.add('hidden');
-    document.getElementById('calibration-screen').classList.remove('hidden');
-    gameState = 'calibrating';
-    baseline = { y: null };
-    calibrationFrames = 0;
+    document.getElementById('dashboard-screen').classList.remove('hidden');
+    videoElement.classList.add('hidden');
+    gameState = 'dashboard';
+    drawStaticBackground();
+    renderLeaderboard();
 });
-
-function updateHUD() {
-    document.getElementById('score-display').innerText = Math.floor(score);
-    document.getElementById('lives-display').innerText = lives;
-    document.getElementById('squats-display').innerText = stats.squats;
-    document.getElementById('jumps-display').innerText = stats.jumps;
-    document.getElementById('calories-display').innerText = calories.toFixed(1);
-}
-
-function startGameplay() {
-    document.getElementById('calibration-screen').classList.add('hidden');
-    document.getElementById('level-up-overlay').classList.add('hidden');
-    document.getElementById('hud').classList.remove('hidden');
-    
-    // Reset Game Variables
-    gameState = 'playing';
-    score = 0;
-    lives = 3;
-    nextLifeScore = 100;
-    levelUpTimer = 0;
-    nextMilestone = 100;
-    speed = 4;
-    invulnerableFrames = 0;
-    frameCount = 0;
-    obstacles = [];
-    currentLane = 0;
-    stats = { squats: 0, jumps: 0 };
-    calories = 0.0;
-    updateHUD();
-    
-    // Start Random Music Track
-    const randomTrack = playlist[Math.floor(Math.random() * playlist.length)];
-    if (bgMusic.src !== randomTrack) {
-        bgMusic.src = randomTrack;
-    }
-    bgMusic.currentTime = 0;
-    bgMusic.play().catch(e => console.log("Audio autoplay blocked by browser:", e));
-    
-    if(gameLoopId) cancelAnimationFrame(gameLoopId);
-    gameLoop();
-}
-
-function gameOver() {
-    gameState = 'gameover';
-    bgMusic.pause(); // Stop music when dead
-    document.getElementById('hud').classList.add('hidden');
-    document.getElementById('level-up-overlay').classList.add('hidden');
-    document.getElementById('game-over-screen').classList.remove('hidden');
-    document.getElementById('final-score').innerText = Math.floor(score);
-    document.getElementById('final-squats').innerText = stats.squats;
-    document.getElementById('final-jumps').innerText = stats.jumps;
-    document.getElementById('final-calories').innerText = calories.toFixed(1);
-    
-    // Set a random health fact
-    const randomFact = healthFacts[Math.floor(Math.random() * healthFacts.length)];
-    document.getElementById('health-fact').innerText = randomFact;
-}
 
 /**
  * GAME ENGINE & RENDERING
  */
-
-// Perspective and layout constants
 const horizonY = gameHeight * 0.3;
-const laneWidthBottom = gameWidth / 3;
-const laneWidthTop = gameWidth / 8; // Taper to horizon
 
-function getScreenPos(laneIdx, depth) {
-    // depth: 0 is horizon (far), 1 is bottom of screen (near)
+function getScreenPos(laneIdx, depth, canvasW) {
+    const laneWidthBottom = canvasW / 3;
+    const laneWidthTop = canvasW / 8;
     const currentY = horizonY + (gameHeight - horizonY) * depth;
-    
-    // Calculate lane center at this depth
     const totalWidthAtDepth = laneWidthTop + (laneWidthBottom * 3 - laneWidthTop) * depth;
     const laneW = totalWidthAtDepth / 3;
-    const centerX = gameWidth / 2;
-    
-    const xOffset = laneIdx * laneW;
-    const currentX = centerX + xOffset;
-    
-    return { x: currentX, y: currentY, w: laneW * 0.8 };
+    const centerX = canvasW / 2;
+    return { x: centerX + (laneIdx * laneW), y: currentY, w: laneW * 0.8 };
 }
 
-function drawBackground() {
-    // Sky
-    ctx.fillStyle = '#0f172a'; // slate-900
-    ctx.fillRect(0, 0, gameWidth, horizonY);
+function drawBackground(canvasW) {
+    const isDark = document.documentElement.classList.contains('dark');
+    ctx.fillStyle = isDark ? '#0f172a' : '#bae6fd'; ctx.fillRect(0, 0, canvasW, horizonY);
+    ctx.fillStyle = isDark ? '#1e293b' : '#bbf7d0'; ctx.fillRect(0, horizonY, canvasW, gameHeight - horizonY);
+    ctx.strokeStyle = isDark ? '#334155' : '#ffffff'; ctx.lineWidth = 6;
     
-    // Ground
-    ctx.fillStyle = '#1e293b'; // slate-800
-    ctx.fillRect(0, horizonY, gameWidth, gameHeight - horizonY);
-    
-    // Draw 3 Lanes (Pseudo 3D lines)
-    ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 4;
-    
-    const pFarLeft = getScreenPos(-1.5, 0);
-    const pFarRight = getScreenPos(1.5, 0);
-    const pNearLeft = getScreenPos(-1.5, 1);
-    const pNearRight = getScreenPos(1.5, 1);
-    
-    const pFarL1 = getScreenPos(-0.5, 0);
-    const pNearL1 = getScreenPos(-0.5, 1);
-    const pFarR1 = getScreenPos(0.5, 0);
-    const pNearR1 = getScreenPos(0.5, 1);
+    const pFarLeft = getScreenPos(-1.5, 0, canvasW), pFarRight = getScreenPos(1.5, 0, canvasW);
+    const pNearLeft = getScreenPos(-1.5, 1, canvasW), pNearRight = getScreenPos(1.5, 1, canvasW);
+    const pFarL1 = getScreenPos(-0.5, 0, canvasW), pNearL1 = getScreenPos(-0.5, 1, canvasW);
+    const pFarR1 = getScreenPos(0.5, 0, canvasW), pNearR1 = getScreenPos(0.5, 1, canvasW);
 
     ctx.beginPath();
     ctx.moveTo(pNearLeft.x, pNearLeft.y); ctx.lineTo(pFarLeft.x, pFarLeft.y);
@@ -499,243 +662,365 @@ function drawBackground() {
     ctx.stroke();
 }
 
+function drawStaticBackground() {
+    ctx.clearRect(0, 0, gameWidth, gameHeight);
+    drawBackground(gameWidth);
+}
+
 function spawnObstacle() {
     let availableTypes = ['high', 'low', 'block'];
-    
-    // Progressive Difficulty
     if (score > 100) availableTypes.push('low-wide');
     if (score > 200) availableTypes.push('door');
     
     const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-    let lane = lanes[Math.floor(Math.random() * lanes.length)];
-    let span = 1; // Default to taking up 1 lane
+    let lane = [-1, 0, 1][Math.floor(Math.random() * 3)];
+    let span = 1;
 
-    // Configure special multi-lane obstacles
-    if (type === 'low-wide') {
-        lane = 0; // Center it
-        span = 3; // Covers all 3 lanes
-    } else if (type === 'door') {
-        span = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3 lanes wide
-        if (span === 3) {
-            lane = 0; // Must be centered
-        } else if (span === 2) {
-            lane = Math.random() < 0.5 ? -0.5 : 0.5; // Centers between Left+Center OR Center+Right
-        } else {
-            lane = lanes[Math.floor(Math.random() * lanes.length)];
-        }
+    if (type === 'low-wide') { lane = 0; span = 3; } 
+    else if (type === 'door') {
+        span = Math.floor(Math.random() * 3) + 1;
+        if (span === 3) { lane = 0; } 
+        else if (span === 2) { lane = Math.random() < 0.5 ? -0.5 : 0.5; } 
+    }
+    obstacles.push({ lane: lane, span: span, depth: 0, type: type, active: true });
+}
+
+function updateHUD() {
+    if (numPlayers === 1) {
+        document.getElementById('score-display-1p').innerText = Math.floor(score);
+        document.getElementById('lives-display-1p').innerText = players[0].lives;
+        document.getElementById('squats-display-1p').innerText = players[0].stats.squats;
+        document.getElementById('jumps-display-1p').innerText = players[0].stats.jumps;
+        let calories = (score * 0.02) + (players[0].stats.squats * 0.5) + (players[0].stats.jumps * 0.8);
+        document.getElementById('calories-display-1p').innerText = calories.toFixed(1);
+    } else {
+        document.getElementById('score-display-2p').innerText = Math.floor(score);
+        document.getElementById('p1-lives-display').innerText = players[0].lives;
+        document.getElementById('p1-squats').innerText = players[0].stats.squats;
+        document.getElementById('p1-jumps').innerText = players[0].stats.jumps;
+        document.getElementById('p2-lives-display').innerText = players[1].lives;
+        document.getElementById('p2-squats').innerText = players[1].stats.squats;
+        document.getElementById('p2-jumps').innerText = players[1].stats.jumps;
+    }
+}
+
+function startGameplay() {
+    document.getElementById('calibration-screen').classList.add('hidden');
+    
+    if (numPlayers === 1) {
+        document.getElementById('hud-1p').classList.remove('hidden');
+        document.getElementById('hud-2p').classList.add('hidden');
+    } else {
+        document.getElementById('hud-1p').classList.add('hidden');
+        document.getElementById('hud-2p').classList.remove('hidden');
+        document.getElementById('hud-p2').classList.remove('hidden');
     }
     
-    obstacles.push({
-        lane: lane,
-        span: span,
-        depth: 0, // Starts at horizon
-        type: type,
-        active: true
-    });
+    gameState = 'playing'; score = 0; speed = 4; frameCount = 0; obstacles = []; levelUpTimer = 0; nextMilestone = 100;
+    
+    for (let i=0; i<numPlayers; i++) {
+        players[i].lives = 3; players[i].lane = 0; players[i].stats = {squats: 0, jumps: 0};
+        players[i].invulnerableFrames = 0; players[i].actionCooldown = 0;
+        players[i].renderX = undefined; 
+        players[i].renderYOffset = 0;
+        players[i].renderScaleX = 1;
+        players[i].renderScaleY = 1;
+        players[i].renderAngle = 0;
+        players[i].renderArmL = undefined;
+        players[i].renderArmR = undefined;
+    }
+    
+    updateHUD();
+    bgMusic.currentTime = 0; bgMusic.play().catch(e => console.log(e));
+    if(gameLoopId) cancelAnimationFrame(gameLoopId);
+    gameLoop();
+}
+
+function gameOver() {
+    gameState = 'gameover';
+    bgMusic.pause(); playSynth('hit');
+    saveScore(score);
+    
+    document.getElementById('hud-1p').classList.add('hidden');
+    document.getElementById('hud-2p').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.remove('hidden');
+    document.getElementById('final-score').innerText = Math.floor(score);
+    
+    document.getElementById('final-p1-squats').innerText = players[0].stats.squats;
+    document.getElementById('final-p1-jumps').innerText = players[0].stats.jumps;
+    
+    if (numPlayers === 2) {
+        document.getElementById('final-p2-container').classList.remove('hidden');
+        document.getElementById('final-p2-squats').innerText = players[1].stats.squats;
+        document.getElementById('final-p2-jumps').innerText = players[1].stats.jumps;
+    } else {
+        document.getElementById('final-p2-container').classList.add('hidden');
+    }
+}
+
+function drawObstacle(obs, subW) {
+    const oPos = getScreenPos(obs.lane, obs.depth, subW);
+    const scale = 0.2 + (obs.depth * 0.8); 
+    const totalW = oPos.w * obs.span * scale;
+    
+    ctx.save();
+    if (obs.type === 'high') {
+        ctx.fillStyle = '#f59e0b'; ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 15;
+        ctx.fillRect(oPos.x - (totalW/2), oPos.y - (100*scale), totalW, 40*scale);
+    } else if (obs.type === 'low' || obs.type === 'low-wide') {
+        ctx.fillStyle = obs.type === 'low-wide' ? '#dc2626' : '#ef4444'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 15;
+        ctx.fillRect(oPos.x - (totalW/2), oPos.y - (30*scale), totalW, 30*scale);
+    } else if (obs.type === 'block') {
+        ctx.fillStyle = '#ec4899'; ctx.shadowColor = '#ec4899'; ctx.shadowBlur = 15;
+        ctx.fillRect(oPos.x - (totalW/2), oPos.y - (80*scale), totalW, 80*scale);
+    } else if (obs.type === 'door') {
+        ctx.fillStyle = '#0ea5e9'; ctx.shadowColor = '#0ea5e9'; ctx.shadowBlur = 15;
+        ctx.fillRect(oPos.x - (totalW/2), oPos.y - (120*scale), totalW, 40*scale);
+        ctx.fillRect(oPos.x - (totalW/2), oPos.y - (120*scale), 20*scale, 120*scale);
+        ctx.fillRect(oPos.x + (totalW/2) - (20*scale), oPos.y - (120*scale), 20*scale, 120*scale);
+    }
+    ctx.restore();
+}
+
+// Function to animate and draw the tiny square man
+function updateAndDrawPlayer(p, subW, playerIndex) {
+    const basePos = getScreenPos(p.lane, 0.85, subW);
+    
+    // Lerp horizontal position
+    if (p.renderX === undefined) p.renderX = basePos.x;
+    p.renderX += (basePos.x - p.renderX) * 0.2;
+    
+    // Bank angle based on momentum
+    const dx = basePos.x - p.renderX;
+    p.renderAngle = dx * 0.005;
+
+    // Movement Intent for arm animation
+    const isMovingLeft = dx < -2;
+    const isMovingRight = dx > 2;
+
+    // Default target states
+    let targetArmL = Math.PI * 0.5 + Math.sin(frameCount * 0.2) * 0.2; // Idle swing
+    let targetArmR = Math.PI * 0.5 - Math.sin(frameCount * 0.2) * 0.2; // Idle swing
+    let targetYOffset = 0;
+    let targetScaleY = 1;
+    let targetScaleX = 1;
+
+    // State machine for Animations
+    if (p.isJumping) {
+        targetYOffset = -90;  // Fly High
+        targetScaleY = 1.1;   // Stretch vertically
+        targetScaleX = 0.9;   // Squeeze horizontally
+        targetArmL = Math.PI * 1.4;  // Point left arm UP
+        targetArmR = -Math.PI * 0.4; // Point right arm UP
+    } else if (p.isSquatting) {
+        targetYOffset = 0;    // Stay on ground
+        targetScaleY = 0.6;   // Squish vertically
+        targetScaleX = 1.3;   // Expand horizontally
+        targetArmL = Math.PI; // Level left arm
+        targetArmR = 0;       // Level right arm
+    } else {
+        // Idle running bob animation
+        targetYOffset = Math.sin(frameCount * 0.3) * 5;
+        
+        // Raising arm if moving left or right
+        if (isMovingLeft) {
+            targetArmL = Math.PI; // Point Left
+        } else if (isMovingRight) {
+            targetArmR = 0; // Point Right
+        }
+    }
+
+    // Initialize arms if undefined
+    if (p.renderArmL === undefined) p.renderArmL = targetArmL;
+    if (p.renderArmR === undefined) p.renderArmR = targetArmR;
+
+    // Smooth Lerp transitions
+    p.renderYOffset += (targetYOffset - p.renderYOffset) * 0.3;
+    p.renderScaleY += (targetScaleY - p.renderScaleY) * 0.3;
+    p.renderScaleX += (targetScaleX - p.renderScaleX) * 0.3;
+    p.renderArmL += (targetArmL - p.renderArmL) * 0.3;
+    p.renderArmR += (targetArmR - p.renderArmR) * 0.3;
+
+    // Start Drawing Player
+    ctx.save();
+    ctx.translate(p.renderX, basePos.y + p.renderYOffset);
+    ctx.rotate(p.renderAngle);
+    ctx.scale(p.renderScaleX, p.renderScaleY);
+
+    // Color logic
+    let color = playerIndex === 0 ? '#3b82f6' : '#ef4444'; // P1 Blue, P2 Red
+    if (p.isJumping) color = playerIndex === 0 ? '#60a5fa' : '#f87171';
+    else if (p.isSquatting) color = playerIndex === 0 ? '#1e3a8a' : '#7f1d1d';
+    if (p.invulnerableFrames > 0) color = '#ffffff';
+
+    // Tiny Square Man size
+    const w = 50; 
+    const h = 50;
+
+    // 1. Draw Jetpack Flame (Behind body) if Jumping
+    if (p.isJumping) {
+        ctx.fillStyle = '#fb923c';
+        ctx.beginPath();
+        ctx.moveTo(-w/3, 0);
+        ctx.lineTo(0, 30 + Math.random() * 20); // Flickering length
+        ctx.lineTo(w/3, 0);
+        ctx.fill();
+    }
+
+    ctx.fillStyle = color;
+    const armLength = 30;
+    const armThickness = 12;
+    const shoulderY = -h + 15;
+
+    // 2. Draw Left Arm
+    ctx.save();
+    ctx.translate(-w/2, shoulderY); // Left shoulder hinge
+    ctx.rotate(p.renderArmL);
+    ctx.beginPath();
+    ctx.roundRect(0, -armThickness/2, armLength, armThickness, armThickness/2);
+    ctx.fill();
+    ctx.restore();
+
+    // 3. Draw Right Arm
+    ctx.save();
+    ctx.translate(w/2, shoulderY); // Right shoulder hinge
+    ctx.rotate(p.renderArmR);
+    ctx.beginPath();
+    ctx.roundRect(0, -armThickness/2, armLength, armThickness, armThickness/2);
+    ctx.fill();
+    ctx.restore();
+
+    // 4. Draw Square Body
+    ctx.shadowColor = color; ctx.shadowBlur = 15; ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(-w/2, -h, w, h, 12);
+    ctx.fill();
+
+    // 5. Draw Visor
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.roundRect(-w/2 + 8, -h + 10, w - 16, 15, 6);
+    ctx.fill();
+
+    ctx.restore();
+    
+    // Draw Ground Shadow (Independent of player Y/rotation so it stays flat)
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 0;
+    ctx.beginPath(); 
+    ctx.ellipse(p.renderX, basePos.y, 25 * p.renderScaleX, 8, 0, 0, Math.PI * 2); 
+    ctx.fill();
 }
 
 function gameLoop() {
     if (gameState !== 'playing') return;
-
-    // Update state
     frameCount++;
 
-    // Calculate energy burned (Rough estimation formula)
-    // Running (score) + 0.5 kcal per squat + 0.8 kcal per jump
-    calories = (score * 0.02) + (stats.squats * 0.5) + (stats.jumps * 0.8);
-
     if (levelUpTimer > 0) {
-        // WE ARE IN THE "NO BLOCK" / "LEVEL UP" PAUSE
         levelUpTimer--;
-        if (levelUpTimer === 0) {
-            document.getElementById('level-up-overlay').classList.add('hidden');
-        }
+        if (levelUpTimer === 0) document.getElementById('level-up-overlay').classList.add('hidden');
     } else {
-        // NORMAL GAMEPLAY
         score += (speed / 100);
-        
-        // Increase difficulty gradually
         speed = 4 + (score / 100);
 
-        // Grant an extra life every 100 points
-        if (score >= nextLifeScore) {
-            lives++;
-            nextLifeScore += 100;
-            
-            // Flash the lives display green to notify the player
-            const livesEl = document.getElementById('lives-display');
-            livesEl.classList.add('text-green-400');
-            setTimeout(() => livesEl.classList.remove('text-green-400'), 500);
-        }
-
-        // Check milestones for level up events
         if (score >= nextMilestone && nextMilestone <= 400) {
-            levelUpTimer = 300; // 5 seconds at 60fps (300 frames)
+            levelUpTimer = 300;
+            let msg = "";
+            if (nextMilestone === 100) msg = "Jump over three row obstacles!";
+            else if (nextMilestone === 200) msg = "Duck under the door frames!";
+            else if (nextMilestone === 300) msg = "You are a moving star!";
+            else if (nextMilestone === 400) msg = "You are a legend!";
             
-            let currentLevelMessage = "";
-            if (nextMilestone === 100) currentLevelMessage = "Jump to avoid three row obstacles!";
-            else if (nextMilestone === 200) currentLevelMessage = "Duck to avoid door obstacles!";
-            else if (nextMilestone === 300) currentLevelMessage = "You are a moving star!";
-            else if (nextMilestone === 400) currentLevelMessage = "You are a legend!";
-            
-            document.getElementById('level-prompt-text').innerText = currentLevelMessage;
+            document.getElementById('level-prompt-text').innerText = msg;
             document.getElementById('level-up-overlay').classList.remove('hidden');
-
+            playSynth('levelup');
             nextMilestone += 100;
         } else {
-            // Spawn obstacles ONLY if we are not pausing for a milestone
             let spawnRate = Math.max(40, 100 - Math.floor(speed * 3));
-            if (frameCount % spawnRate === 0) {
-                spawnObstacle();
-            }
+            if (frameCount % spawnRate === 0) spawnObstacle();
         }
     }
 
-    if (invulnerableFrames > 0) invulnerableFrames--;
-    
-    if (frameCount % 10 === 0) updateHUD();
-
-    // Clear and draw background
-    ctx.clearRect(0, 0, gameWidth, gameHeight);
-    drawBackground();
-
-    // Player Configuration
-    const playerDepth = 0.85; // Near the bottom
-    const pPos = getScreenPos(currentLane, playerDepth);
-    
-    // Obstacle update and draw logic
-    // We sort obstacles by depth so closer ones draw on top
-    obstacles.sort((a,b) => a.depth - b.depth);
-    
-    for (let i = 0; i < obstacles.length; i++) {
-        let obs = obstacles[i];
-        if (!obs.active) continue;
-
-        // Move obstacle closer
-        // Speed scaling based on depth gives pseudo-3d acceleration feel
-        obs.depth += (speed * 0.001) + (obs.depth * 0.02);
-
-        // Draw obstacle
-        const oPos = getScreenPos(obs.lane, obs.depth);
-        const scale = 0.2 + (obs.depth * 0.8); // Scale size based on depth
-        const totalW = oPos.w * obs.span * scale; // Adjust width for spanning multiple lanes
-        
-        ctx.save();
-        if (obs.type === 'high') {
-            // Floating barrier (Need to squat)
-            ctx.fillStyle = '#f59e0b'; // amber-500
-            ctx.shadowColor = '#f59e0b';
-            ctx.shadowBlur = 15;
-            ctx.fillRect(oPos.x - (totalW/2), oPos.y - (100*scale), totalW, 40*scale);
-        } else if (obs.type === 'low' || obs.type === 'low-wide') {
-            // Ground barrier (Need to jump)
-            ctx.fillStyle = obs.type === 'low-wide' ? '#dc2626' : '#ef4444'; // slightly darker red for wide
-            ctx.shadowColor = ctx.fillStyle;
-            ctx.shadowBlur = 15;
-            ctx.fillRect(oPos.x - (totalW/2), oPos.y - (30*scale), totalW, 30*scale);
-        } else if (obs.type === 'block') {
-            // Full block (Need to dodge)
-            ctx.fillStyle = '#ec4899'; // pink-500
-            ctx.shadowColor = '#ec4899';
-            ctx.shadowBlur = 15;
-            ctx.fillRect(oPos.x - (totalW/2), oPos.y - (80*scale), totalW, 80*scale);
-        } else if (obs.type === 'door') {
-            // Door frame (Need to duck/squat)
-            ctx.fillStyle = '#0ea5e9'; // sky-500
-            ctx.shadowColor = '#0ea5e9';
-            ctx.shadowBlur = 15;
-            // Draw Top bar
-            ctx.fillRect(oPos.x - (totalW/2), oPos.y - (120*scale), totalW, 40*scale);
-            // Draw Left pillar
-            ctx.fillRect(oPos.x - (totalW/2), oPos.y - (120*scale), 20*scale, 120*scale);
-            // Draw Right pillar
-            ctx.fillRect(oPos.x + (totalW/2) - (20*scale), oPos.y - (120*scale), 20*scale, 120*scale);
+    obstacles.forEach(obs => {
+        if (obs.active) {
+            obs.depth += (speed * 0.001) + (obs.depth * 0.02);
+            if (obs.depth > 1.2) obs.active = false;
         }
-        ctx.restore();
+    });
 
-        // Collision Detection
-        // Only check when obstacle is at player's depth slice
-        if (obs.depth > playerDepth - 0.1 && obs.depth < playerDepth + 0.1) {
-            
-            // Check if player's current lane intersects the obstacle's total span
-            let isHitLane = Math.abs(currentLane - obs.lane) <= (obs.span - 1) / 2 + 0.01;
+    const playerDepth = 0.85;
+    for (let i = 0; i < numPlayers; i++) {
+        let p = players[i];
+        if (p.invulnerableFrames > 0) p.invulnerableFrames--;
+        if (p.lives <= 0) continue;
 
-            if (isHitLane) {
-                let hit = false;
-                if (obs.type === 'block') {
-                    hit = true; // Cannot jump or squat under a block
-                } else if ((obs.type === 'high' || obs.type === 'door') && !isSquatting) {
-                    hit = true; // Hit face if didn't squat
-                } else if ((obs.type === 'low' || obs.type === 'low-wide') && !isJumping) {
-                    hit = true; // Tripped if didn't jump
-                }
+        for (let obs of obstacles) {
+            if (!obs.active || p.invulnerableFrames > 0) continue;
+            if (obs.depth > playerDepth - 0.1 && obs.depth < playerDepth + 0.1) {
+                let isHitLane = Math.abs(p.lane - obs.lane) <= (obs.span - 1) / 2 + 0.01;
+                if (isHitLane) {
+                    let hit = false;
+                    if (obs.type === 'block') hit = true;
+                    else if ((obs.type === 'high' || obs.type === 'door') && !p.isSquatting) hit = true;
+                    else if ((obs.type === 'low' || obs.type === 'low-wide') && !p.isJumping) hit = true;
 
-                if (hit && invulnerableFrames === 0) {
-                    obs.active = false; // Destroy the obstacle that hit you
-                    lives--;
-                    updateHUD();
-                    
-                    if (lives <= 0) {
-                        gameOver();
-                        return; // Stop rendering
-                    } else {
-                        invulnerableFrames = 60; // 1 second of invulnerability (approx 60fps)
+                    if (hit) {
+                        p.lives--; updateHUD(); playSynth('hit');
+                        if (p.lives > 0) p.invulnerableFrames = 60;
                     }
                 }
             }
         }
-        
-        // Remove obstacles passed the camera
-        if (obs.depth > 1.2) {
-            obs.active = false;
-        }
     }
     
-    // Clean up inactive obstacles
+    let allDead = true;
+    for (let i=0; i<numPlayers; i++) if (players[i].lives > 0) allDead = false;
+    if (allDead) { gameOver(); return; }
+
     obstacles = obstacles.filter(o => o.active);
+    if (frameCount % 10 === 0) updateHUD();
 
-    // Draw Player
-    if (invulnerableFrames === 0 || Math.floor(frameCount / 5) % 2 === 0) {
+    ctx.clearRect(0, 0, gameWidth, gameHeight);
+    const subW = gameWidth / numPlayers;
+
+    for (let i = 0; i < numPlayers; i++) {
         ctx.save();
-        let pHeight = 80;
-        let pYOffset = 0;
-        let color = '#3b82f6'; // blue-500 (Normal)
-        
-        if (isJumping) {
-            pYOffset = -60; // Move up
-            color = '#a855f7'; // purple-500
-        } else if (isSquatting) {
-            pHeight = 40; // Shrink
-            pYOffset = 40; // Move down
-            color = '#10b981'; // emerald-500
-        }
-
-        if (invulnerableFrames > 0) {
-            color = '#ef4444'; // Flash red when hit
-        }
-
-        // Glow effect
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 20;
-        
-        // Draw character (A simple high-tech pill shape)
-        ctx.fillStyle = color;
+        ctx.translate(i * subW, 0);
         ctx.beginPath();
-        ctx.roundRect(pPos.x - (pPos.w*0.3)/2, pPos.y - pHeight + pYOffset, pPos.w*0.3, pHeight, 20);
-        ctx.fill();
+        ctx.rect(0, 0, subW, gameHeight); 
+        ctx.clip();
         
-        // Draw trail/shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.shadowBlur = 0;
-        ctx.beginPath();
-        ctx.ellipse(pPos.x, pPos.y, pPos.w*0.2, 10, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
+        drawBackground(subW);
+        obstacles.sort((a,b) => a.depth - b.depth).forEach(obs => {
+            if (obs.active) drawObstacle(obs, subW);
+        });
+
+        if (players[i].lives > 0 && (players[i].invulnerableFrames === 0 || Math.floor(frameCount / 5) % 2 === 0)) {
+            updateAndDrawPlayer(players[i], subW, i);
+        }
         ctx.restore();
+
+        if (i > 0) {
+            ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#475569' : '#ffffff';
+            ctx.fillRect(i * subW - 3, 0, 6, gameHeight);
+        }
     }
 
     gameLoopId = requestAnimationFrame(gameLoop);
 }
+
+/**
+ * INITIALIZATION
+ */
+window.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('game_theme') || 'dark';
+    document.getElementById('theme-select').value = savedTheme; updateTheme(savedTheme);
+    const savedLang = localStorage.getItem('game_lang') || 'en';
+    document.getElementById('lang-select').value = savedLang; updateLanguage(savedLang);
+    const savedName = localStorage.getItem('player_name');
+    if (savedName) document.getElementById('player-name').value = savedName;
+    drawStaticBackground();
+});
 </script>
 
 </body>
