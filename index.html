@@ -50,6 +50,10 @@
     <!-- Background Music -->
     <audio id="bg-music" loop preload="auto">
         <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+          <source src="music/Dawn_Light_On_Stone.mp3" type="audio/mpeg">
+    <source src="music/The_Gravity_Cage.mp3" type="audio/mpeg">
+    <source src="music/Gravity_s_Edge.mp3" type="audio/mpeg">
+    <source src="music/Plaza_Mornings.mp3" type="audio/mpeg">
     </audio>
 
     <!-- UI Layer -->
@@ -193,7 +197,13 @@
             <!-- Start / Calibrate -->
             <div id="start-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl border-4 border-green-500/50 text-center max-w-lg w-[90%] backdrop-blur-md hidden shadow-2xl">
                 <h1 id="txt-ready" class="text-5xl font-black mb-6 text-gray-900 dark:text-white">Ready to move?</h1>
-                <p id="txt-ready-sub" class="text-2xl text-gray-700 dark:text-gray-300 mb-8 font-semibold">Step back so your upper body is visible. Stand still in the center to calibrate.</p>
+                <p id="txt-ready-sub" class="text-2xl text-gray-700 dark:text-gray-300 mb-6 font-semibold">Step back so your upper body is visible. Stand still in the center to calibrate.</p>
+                
+                <div class="flex justify-center gap-2 mb-8">
+                    <button id="btn-speed-normal" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl border-4 border-green-400 transform transition text-xl">Normal</button>
+                    <button id="btn-speed-chill" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-3 rounded-xl border-4 border-transparent transform transition text-xl">Chill Mode</button>
+                </div>
+
                 <button id="start-btn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-black py-6 px-8 rounded-2xl shadow-lg transform transition hover:scale-105 active:scale-95 text-3xl w-full">
                     Start Calibration
                 </button>
@@ -254,6 +264,7 @@
 let currentPlayerName = "Guest";
 let isCameraInitialized = false;
 let numPlayers = 1;
+let speedMultiplier = 1;
 
 const translations = {
     en: {
@@ -270,7 +281,8 @@ const translations = {
         readySub: "Step back so your upper body is visible. Stand still in the center to calibrate.",
         startCalBtn: "Start Calibration", standStill: "Stand Still...", learning: "Learning your neutral pose.",
         gameOver: "Great Job!", finalScore: "Score: ", returnDash: "Return to Dashboard",
-        hudScore1p: "Score", hudLives1p: "Lives", hudActivity1p: "Activity", hudSquats1p: "Squats", hudJumps1p: "Jumps"
+        hudScore1p: "Score", hudLives1p: "Lives", hudActivity1p: "Activity", hudSquats1p: "Squats", hudJumps1p: "Jumps",
+        speedNormal: "Normal Mode", speedChill: "Chill Mode"
     },
     mi: {
         themeDark: "Kupu Pōuri (Dark)", themeLight: "Kupu Mārama (Light)",
@@ -286,7 +298,8 @@ const translations = {
         readySub: "Hoki whakamuri kia kitea te tinana. Tū mārie i waenganui.",
         startCalBtn: "Tīmata", standStill: "Tū Mārie...", learning: "E ako ana i tō tūnga.",
         gameOver: "Ka Rawe!", finalScore: "Kaute: ", returnDash: "Hoki ki te Pīhono",
-        hudScore1p: "Kaute", hudLives1p: "Oranga", hudActivity1p: "Mahi", hudSquats1p: "Piko", hudJumps1p: "Peke"
+        hudScore1p: "Kaute", hudLives1p: "Oranga", hudActivity1p: "Mahi", hudSquats1p: "Piko", hudJumps1p: "Peke",
+        speedNormal: "Mahi Pūnoa", speedChill: "Mahi Whakatā"
     }
 };
 
@@ -304,7 +317,9 @@ const elementsToTranslate = {
     'txt-game-over': 'gameOver', 'txt-final-score': 'finalScore',
     'restart-btn': 'returnDash',
     'txt-hud-score-1p': 'hudScore1p', 'txt-hud-lives-1p': 'hudLives1p', 'txt-hud-activity-1p': 'hudActivity1p',
-    'txt-hud-squats-1p': 'hudSquats1p', 'txt-hud-jumps-1p': 'hudJumps1p'
+    'txt-hud-squats-1p': 'hudSquats1p', 'txt-hud-jumps-1p': 'hudJumps1p',
+    'btn-speed-normal': 'speedNormal',
+    'btn-speed-chill': 'speedChill'
 };
 
 function updateLanguage(lang) {
@@ -313,6 +328,7 @@ function updateLanguage(lang) {
         const el = document.getElementById(id);
         if (el) el.textContent = dict[key];
     }
+
     document.getElementById('player-name').placeholder = dict.placeholder;
     if (!document.getElementById('dashboard-screen').classList.contains('hidden')) {
         document.getElementById('txt-hello').textContent = dict.hello + currentPlayerName + "!";
@@ -580,6 +596,33 @@ document.getElementById('btn-mode-2p').addEventListener('click', () => {
     document.getElementById('btn-mode-1p').classList.replace('text-white', 'text-gray-800');
 });
 
+// Speed Toggle Listeners
+document.getElementById('btn-speed-normal').addEventListener('click', () => {
+    speedMultiplier = 1;
+    document.getElementById('btn-speed-normal').classList.replace('border-transparent', 'border-green-400');
+    document.getElementById('btn-speed-normal').classList.replace('bg-gray-200', 'bg-green-600');
+    document.getElementById('btn-speed-normal').classList.replace('text-gray-800', 'text-white');
+    document.getElementById('btn-speed-normal').classList.remove('dark:bg-gray-700', 'dark:text-gray-200');
+    
+    document.getElementById('btn-speed-chill').classList.replace('border-cyan-400', 'border-transparent');
+    document.getElementById('btn-speed-chill').classList.replace('bg-cyan-600', 'bg-gray-200');
+    document.getElementById('btn-speed-chill').classList.replace('text-white', 'text-gray-800');
+    document.getElementById('btn-speed-chill').classList.add('dark:bg-gray-700', 'dark:text-gray-200');
+});
+
+document.getElementById('btn-speed-chill').addEventListener('click', () => {
+    speedMultiplier = 0.25;
+    document.getElementById('btn-speed-chill').classList.replace('border-transparent', 'border-cyan-400');
+    document.getElementById('btn-speed-chill').classList.replace('bg-gray-200', 'bg-cyan-600');
+    document.getElementById('btn-speed-chill').classList.replace('text-gray-800', 'text-white');
+    document.getElementById('btn-speed-chill').classList.remove('dark:bg-gray-700', 'dark:text-gray-200');
+    
+    document.getElementById('btn-speed-normal').classList.replace('border-green-400', 'border-transparent');
+    document.getElementById('btn-speed-normal').classList.replace('bg-green-600', 'bg-gray-200');
+    document.getElementById('btn-speed-normal').classList.replace('text-white', 'text-gray-800');
+    document.getElementById('btn-speed-normal').classList.add('dark:bg-gray-700', 'dark:text-gray-200');
+});
+
 document.getElementById('btn-continue').addEventListener('click', () => {
     const name = document.getElementById('player-name').value.trim();
     if (!name) {
@@ -716,7 +759,7 @@ function startGameplay() {
         document.getElementById('hud-p2').classList.remove('hidden');
     }
     
-    gameState = 'playing'; score = 0; speed = 4; frameCount = 0; obstacles = []; levelUpTimer = 0; nextMilestone = 100;
+    gameState = 'playing'; score = 0; speed = 4 * speedMultiplier; frameCount = 0; obstacles = []; levelUpTimer = 0; nextMilestone = 100;
     
     for (let i=0; i<numPlayers; i++) {
         players[i].lives = 3; players[i].lane = 0; players[i].stats = {squats: 0, jumps: 0};
@@ -921,7 +964,7 @@ function gameLoop() {
         if (levelUpTimer === 0) document.getElementById('level-up-overlay').classList.add('hidden');
     } else {
         score += (speed / 100);
-        speed = 4 + (score / 100);
+        speed = (4 + (score / 100)) * speedMultiplier;
 
         if (score >= nextMilestone && nextMilestone <= 400) {
             levelUpTimer = 300;
@@ -936,7 +979,9 @@ function gameLoop() {
             playSynth('levelup');
             nextMilestone += 100;
         } else {
-            let spawnRate = Math.max(40, 100 - Math.floor(speed * 3));
+            let baseSpeed = 4 + (score / 100);
+            let baseSpawnRate = Math.max(40, 100 - Math.floor(baseSpeed * 3));
+            let spawnRate = Math.floor(baseSpawnRate / speedMultiplier);
             if (frameCount % spawnRate === 0) spawnObstacle();
         }
     }
