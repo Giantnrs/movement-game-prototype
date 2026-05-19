@@ -48,13 +48,24 @@
     <canvas id="game-canvas"></canvas>
 
     <!-- Background Music -->
-    <audio id="bg-music" loop preload="auto">
-        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
-          <source src="music/Dawn_Light_On_Stone.mp3" type="audio/mpeg">
-    <source src="music/The_Gravity_Cage.mp3" type="audio/mpeg">
-    <source src="music/Gravity_s_Edge.mp3" type="audio/mpeg">
-    <source src="music/Plaza_Mornings.mp3" type="audio/mpeg">
-    </audio>
+    <audio id="bg-music" loop preload="auto"></audio>
+    <script>
+    const musicPlaylist = [
+      "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+      "music/Dawn_Light_On_Stone.mp3",
+      "music/The_Gravity_Cage.mp3",
+      "music/Gravity_s_Edge.mp3",
+      "music/Plaza_Mornings.mp3"
+    ];
+
+    // Pick a random track on each load
+    function setRandomMusic() {
+      const bgMusic = document.getElementById('bg-music');
+      const randomSrc = musicPlaylist[Math.floor(Math.random() * musicPlaylist.length)];
+      bgMusic.src = randomSrc;
+    }
+    window.addEventListener('DOMContentLoaded', setRandomMusic);
+    </script>
 
     <!-- UI Layer -->
     <div id="ui-layer" class="flex flex-col justify-between p-6">
