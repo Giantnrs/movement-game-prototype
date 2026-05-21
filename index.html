@@ -36,6 +36,9 @@
             outline-offset: 2px;
         }
         #center-screens { overflow-y: auto; }
+        #instructions-screen { pointer-events: auto; }
+        #instruction-image[src=""],
+        #instruction-video[src=""] { display: none; }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-[#1a202c] text-gray-900 dark:text-white">
@@ -196,13 +199,47 @@
                 <p id="txt-warning-1" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-6">
                     Please play in a clear, dry, non-slip area with enough room to move both arms.
                 </p>
-                <ul class="text-gray-700 dark:text-amber-100/95 text-xl font-medium leading-relaxed space-y-4 mb-8 list-disc pl-6">
-                    <li id="txt-warning-2">Go at your own pace and hold nearby support if needed.</li>
-                    <li id="txt-warning-3">Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.</li>
-                </ul>
+                <p id="txt-warning-2" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-6">
+                    Go at your own pace and hold nearby support if needed.
+                </p>
+                <p id="txt-warning-3" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-8">
+                    Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.
+                </p>
                 <button type="button" id="warning-continue-btn" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-black py-5 px-6 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-2xl md:text-3xl w-full">
                     I understand
                 </button>
+            </div>
+
+            <!-- How to play (5 steps) -->
+            <div id="instructions-screen" class="hidden fixed inset-0 z-40 flex flex-col items-center justify-center bg-slate-100/95 dark:bg-[#1a202c]/95 backdrop-blur-md text-gray-900 dark:text-white pointer-events-auto overflow-y-auto p-4 md:p-6">
+                <div class="w-full max-w-5xl bg-white/95 dark:bg-gray-900/95 rounded-3xl border-4 border-indigo-500/40 shadow-2xl backdrop-blur-md flex flex-col max-h-[95vh]">
+                <header class="text-center pt-6 md:pt-8 pb-4 px-6 shrink-0 border-b-2 border-gray-200 dark:border-gray-700">
+                    <h1 id="txt-instruction-screen-title" class="text-3xl md:text-5xl font-black tracking-tight text-gray-900 dark:text-white">Active Runner - How to play</h1>
+                    <p id="txt-how-to-play" class="text-xl md:text-2xl text-indigo-600 dark:text-indigo-400 font-bold mt-2">Use your body movement to dodge obstacles!</p>
+                </header>
+
+                <div class="flex-1 flex items-stretch justify-center px-4 md:px-6 py-4 min-h-0 overflow-y-auto">
+                    <button type="button" id="instruction-advance" class="w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400 rounded-2xl">
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl shadow-inner overflow-hidden border-2 border-gray-200 dark:border-gray-600 group-hover:scale-[1.01] group-active:scale-[0.99] transition-transform">
+                            <div class="p-4 md:p-6 bg-white dark:bg-gray-900 flex items-center justify-center min-h-[320px] md:min-h-[420px]">
+                                <div class="instruction-media-frame w-full h-full min-h-[280px] md:min-h-[380px] rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                                    <video id="instruction-video" class="max-w-full max-h-full w-full h-full object-contain hidden" autoplay loop muted playsinline></video>
+                                    <img id="instruction-image" src="" alt="" class="max-w-full max-h-full w-full h-full object-contain hidden" />
+                                </div>
+                            </div>
+                            <p id="txt-tap-continue" class="text-center text-sm md:text-base font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 py-3 border-t border-indigo-200 dark:border-indigo-800">Tap anywhere to continue</p>
+                        </div>
+                    </button>
+                </div>
+
+                <footer class="shrink-0 px-4 md:px-6 pb-6 pt-2">
+                    <div class="flex items-center justify-between gap-4 bg-gray-50 dark:bg-gray-800 rounded-2xl px-4 py-4 border-2 border-gray-200 dark:border-gray-700">
+                        <button type="button" id="instruction-prev" class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-2xl font-black shadow-lg transition disabled:opacity-30 disabled:pointer-events-none" aria-label="Previous">←</button>
+                        <p id="instruction-page" class="text-xl md:text-2xl font-black tabular-nums text-gray-800 dark:text-gray-200"><span id="instruction-page-current" class="inline-block min-w-[2ch] text-center px-3 py-1 rounded-full bg-indigo-600 text-white">1</span> / <span id="instruction-page-total">5</span></p>
+                        <button type="button" id="instruction-next" class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-2xl font-black shadow-lg transition" aria-label="Next">→</button>
+                    </div>
+                </footer>
+                </div>
             </div>
 
             <!-- Start / Calibrate -->
@@ -295,7 +332,19 @@ const translations = {
         loadingAi: "Loading AI Engine...", loadingSub: "Please allow camera access when prompted.",
         warningTitle: "Safety Warning", warning1: "Please play in a clear, dry, non-slip area with enough room to move both arms.",
         warning2: "Go at your own pace and hold nearby support if needed.", warning3: "Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.",
-        warningBtn: "I understand", ready: "Ready to move?",
+        warningBtn: "I understand",
+        instructionScreenTitle: "Active Runner - How to play",
+        howToPlay: "Use your body movement to dodge obstacles!",
+        tapToContinue: "Tap anywhere to continue",
+        tapToStart: "Tap to start calibration",
+        instructionSlides: [
+            { media: "left.mp4", mediaType: "video", accent: "blue" },
+            { media: "right.mp4", mediaType: "video", accent: "blue" },
+            { media: "fly.png", mediaType: "image", accent: "purple" },
+            { media: "duck.png", mediaType: "image", accent: "green" },
+            { media: "powerup.png", mediaType: "image", accent: "indigo" }
+        ],
+        ready: "Ready to move?",
         readySub: "Step back so your upper body is visible. Stand still in the center to calibrate.",
         startCalBtn: "Start Calibration", standStill: "Stand Still...", learning: "Learning your neutral pose.",
         gameOver: "Great Job!", finalScore: "Score: ", returnDash: "Return to Dashboard",
@@ -314,7 +363,19 @@ const translations = {
         loadingAi: "E uta ana te Kāmera...", loadingSub: "Tukuna koa te kāmera kia kā.",
         warningTitle: "Whakatūpato Haumaru", warning1: "Me tākaro ki tētahi wāhi wātea, maroke.",
         warning2: "Kia tau te haere, puritia tētahi tūāpapa mehemea e tika ana.", warning3: "Kāti ināianei tonu mehemea ka pōrangi te māhunga, ka mamae rānei.",
-        warningBtn: "Kua mārama ahau", ready: "Kua reri?",
+        warningBtn: "Kua mārama ahau",
+        instructionScreenTitle: "Active Runner-How to play",
+        howToPlay: "Use your body movement to dodge obstacles!",
+        tapToContinue: "Pāwhiri kia haere tonu",
+        tapToStart: "Pāwhiri kia tīmata te whakatau",
+        instructionSlides: [
+            { media: "left.mp4", mediaType: "video", accent: "blue" },
+            { media: "right.mp4", mediaType: "video", accent: "blue" },
+            { media: "fly.png", mediaType: "image", accent: "purple" },
+            { media: "duck.png", mediaType: "image", accent: "green" },
+            { media: "powerup.png", mediaType: "image", accent: "indigo" }
+        ],
+        ready: "Kua reri?",
         readySub: "Hoki whakamuri kia kitea te tinana. Tū mārie i waenganui.",
         startCalBtn: "Tīmata", standStill: "Tū Mārie...", learning: "E ako ana i tō tūnga.",
         gameOver: "Ka Rawe!", finalScore: "Kaute: ", returnDash: "Hoki ki te Pīhono",
@@ -360,7 +421,9 @@ const elementsToTranslate = {
     'txt-rank': 'rank', 'txt-name': 'name', 'txt-score': 'score',
     'txt-loading-ai': 'loadingAi', 'txt-loading-sub': 'loadingSub',
     'txt-warning-title': 'warningTitle', 'txt-warning-1': 'warning1',
-    'txt-warning-2': 'warning2', 'txt-warning-3': 'warning3', 'warning-continue-btn': 'warningBtn', 
+    'txt-warning-2': 'warning2', 'txt-warning-3': 'warning3', 'warning-continue-btn': 'warningBtn',
+    'txt-instruction-screen-title': 'instructionScreenTitle',
+    'txt-how-to-play': 'howToPlay',
     'txt-ready': 'ready', 'txt-ready-sub': 'readySub', 'start-btn': 'startCalBtn',
     'txt-stand-still': 'standStill', 'txt-learning': 'learning',
     'txt-game-over': 'gameOver', 'txt-final-score': 'finalScore',
@@ -384,6 +447,9 @@ function updateLanguage(lang) {
     if (!document.getElementById('dashboard-screen').classList.contains('hidden')) {
         document.getElementById('txt-hello').textContent = dict.hello + currentPlayerName + "!";
     }
+    if (!document.getElementById('instructions-screen').classList.contains('hidden')) {
+        renderInstructionSlide();
+    }
     localStorage.setItem('game_lang', lang);
 }
 
@@ -392,7 +458,7 @@ function updateTheme(theme) {
     if (theme === 'dark') htmlEl.classList.add('dark');
     else htmlEl.classList.remove('dark');
     localStorage.setItem('game_theme', theme);
-    if(gameState === 'loading' || gameState === 'login' || gameState === 'dashboard') drawStaticBackground();
+    if(gameState === 'loading' || gameState === 'login' || gameState === 'dashboard' || gameState === 'instructions') drawStaticBackground();
 }
 
 function calculateStreak() {
@@ -459,7 +525,74 @@ window.addEventListener('resize', () => {
     if(gameState === 'login' || gameState === 'dashboard') drawStaticBackground();
 });
 
-let gameState = 'login'; 
+let gameState = 'login';
+let instructionStep = 0;
+
+function getInstructionSlides() {
+    return translations[document.getElementById('lang-select').value].instructionSlides;
+}
+
+function renderInstructionSlide() {
+    const slides = getInstructionSlides();
+    const slide = slides[instructionStep];
+    const dict = translations[document.getElementById('lang-select').value];
+
+    document.getElementById('instruction-page-current').textContent = String(instructionStep + 1);
+    document.getElementById('instruction-page-total').textContent = String(slides.length);
+
+    const img = document.getElementById('instruction-image');
+    const video = document.getElementById('instruction-video');
+    video.pause();
+    video.classList.add('hidden');
+    img.classList.add('hidden');
+    img.removeAttribute('src');
+    video.removeAttribute('src');
+    video.innerHTML = '';
+
+    if (slide.mediaType === 'video') {
+        const source = document.createElement('source');
+        source.src = slide.media;
+        if (slide.media.endsWith('.mov')) source.type = 'video/quicktime';
+        else if (slide.media.endsWith('.mp4')) source.type = 'video/mp4';
+        video.appendChild(source);
+        video.classList.remove('hidden');
+        video.load();
+        video.play().catch(() => {});
+    } else {
+        img.src = slide.media;
+        img.classList.remove('hidden');
+    }
+
+    const isLast = instructionStep === slides.length - 1;
+    document.getElementById('txt-tap-continue').textContent = isLast ? dict.tapToStart : dict.tapToContinue;
+    document.getElementById('instruction-prev').disabled = instructionStep === 0;
+}
+
+function showInstructionsScreen() {
+    instructionStep = 0;
+    gameState = 'instructions';
+    document.getElementById('instructions-screen').classList.remove('hidden');
+    drawStaticBackground();
+    renderInstructionSlide();
+}
+
+function advanceInstruction() {
+    const slides = getInstructionSlides();
+    if (instructionStep < slides.length - 1) {
+        instructionStep++;
+        renderInstructionSlide();
+    } else {
+        document.getElementById('instructions-screen').classList.add('hidden');
+        document.getElementById('start-screen').classList.remove('hidden');
+    }
+}
+
+function goBackInstruction() {
+    if (instructionStep > 0) {
+        instructionStep--;
+        renderInstructionSlide();
+    }
+} 
 let score = 0, speed = 4, frameCount = 0, obstacles = [], gameLoopId;
 let levelUpTimer = 0, nextMilestone = 100;
 const CALIBRATION_REQUIRED_FRAMES = 60; 
@@ -700,8 +833,12 @@ document.getElementById('btn-play').addEventListener('click', () => {
 
 document.getElementById('warning-continue-btn').addEventListener('click', () => {
     document.getElementById('warning-screen').classList.add('hidden');
-    document.getElementById('start-screen').classList.remove('hidden');
+    showInstructionsScreen();
 });
+
+document.getElementById('instruction-advance').addEventListener('click', advanceInstruction);
+document.getElementById('instruction-next').addEventListener('click', (e) => { e.stopPropagation(); advanceInstruction(); });
+document.getElementById('instruction-prev').addEventListener('click', (e) => { e.stopPropagation(); goBackInstruction(); });
 
 document.getElementById('start-btn').addEventListener('click', () => {
     audioCtx.resume();
