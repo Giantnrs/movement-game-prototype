@@ -213,7 +213,10 @@
             <!-- How to play (5 steps) -->
             <div id="instructions-screen" class="hidden fixed inset-0 z-40 flex flex-col items-center justify-center bg-slate-100/95 dark:bg-[#1a202c]/95 backdrop-blur-md text-gray-900 dark:text-white pointer-events-auto overflow-y-auto p-4 md:p-6">
                 <div class="w-full max-w-5xl bg-white/95 dark:bg-gray-900/95 rounded-3xl border-4 border-indigo-500/40 shadow-2xl backdrop-blur-md flex flex-col max-h-[95vh]">
-                <header class="text-center pt-6 md:pt-8 pb-4 px-6 shrink-0 border-b-2 border-gray-200 dark:border-gray-700">
+                <header class="text-center pt-6 md:pt-8 pb-4 px-6 pr-28 md:pr-36 shrink-0 border-b-2 border-gray-200 dark:border-gray-700 relative">
+                    <button type="button" id="instruction-skip" class="absolute top-4 right-4 md:top-6 md:right-6 z-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 px-4 md:py-3 md:px-5 rounded-xl shadow-lg text-base md:text-lg transition whitespace-nowrap">
+                        Skip tutorial
+                    </button>
                     <h1 id="txt-instruction-screen-title" class="text-3xl md:text-5xl font-black tracking-tight text-gray-900 dark:text-white">Active Runner - How to play</h1>
                     <p id="txt-how-to-play" class="text-xl md:text-2xl text-indigo-600 dark:text-indigo-400 font-bold mt-2">Use your body movement to dodge obstacles!</p>
                 </header>
@@ -227,16 +230,15 @@
                                     <img id="instruction-image" src="" alt="" class="max-w-full max-h-full w-full h-full object-contain hidden" />
                                 </div>
                             </div>
-                            <p id="txt-tap-continue" class="text-center text-sm md:text-base font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 py-3 border-t border-indigo-200 dark:border-indigo-800">Tap anywhere to continue</p>
                         </div>
                     </button>
                 </div>
 
                 <footer class="shrink-0 px-4 md:px-6 pb-6 pt-2">
-                    <div class="flex items-center justify-between gap-4 bg-gray-50 dark:bg-gray-800 rounded-2xl px-4 py-4 border-2 border-gray-200 dark:border-gray-700">
-                        <button type="button" id="instruction-prev" class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-2xl font-black shadow-lg transition disabled:opacity-30 disabled:pointer-events-none" aria-label="Previous">←</button>
+                    <div class="flex items-center justify-between gap-4 bg-gray-50 dark:bg-gray-800 rounded-2xl px-4 py-3 md:py-4 border-2 border-gray-200 dark:border-gray-700">
+                        <button type="button" id="instruction-prev" class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-3xl font-black shadow-lg transition disabled:opacity-30 disabled:pointer-events-none" aria-label="Previous">←</button>
                         <p id="instruction-page" class="text-xl md:text-2xl font-black tabular-nums text-gray-800 dark:text-gray-200"><span id="instruction-page-current" class="inline-block min-w-[2ch] text-center px-3 py-1 rounded-full bg-indigo-600 text-white">1</span> / <span id="instruction-page-total">5</span></p>
-                        <button type="button" id="instruction-next" class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-2xl font-black shadow-lg transition" aria-label="Next">→</button>
+                        <button type="button" id="instruction-next" class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-3xl font-black shadow-lg transition" aria-label="Next">→</button>
                     </div>
                 </footer>
                 </div>
@@ -328,8 +330,7 @@ const translations = {
         warningBtn: "I understand",
         instructionScreenTitle: "Active Runner - How to play",
         howToPlay: "Use your body movement to dodge obstacles!",
-        tapToContinue: "Tap anywhere to continue",
-        tapToStart: "Tap to start calibration",
+        instructionSkip: "Skip tutorial",
         instructionSlides: [
             { media: "left.mp4", mediaType: "video", accent: "blue" },
             { media: "right.mp4", mediaType: "video", accent: "blue" },
@@ -357,8 +358,7 @@ const translations = {
         warningBtn: "Kua mārama ahau",
         instructionScreenTitle: "Active Runner-How to play",
         howToPlay: "Use your body movement to dodge obstacles!",
-        tapToContinue: "Pāwhiri kia haere tonu",
-        tapToStart: "Pāwhiri kia tīmata te whakatau",
+        instructionSkip: "Peke i te aratohu",
         instructionSlides: [
             { media: "left.mp4", mediaType: "video", accent: "blue" },
             { media: "right.mp4", mediaType: "video", accent: "blue" },
@@ -386,6 +386,7 @@ const elementsToTranslate = {
     'txt-warning-2': 'warning2', 'txt-warning-3': 'warning3', 'warning-continue-btn': 'warningBtn',
     'txt-instruction-screen-title': 'instructionScreenTitle',
     'txt-how-to-play': 'howToPlay',
+    'instruction-skip': 'instructionSkip',
     'txt-ready': 'ready', 'txt-ready-sub': 'readySub', 'start-btn': 'startCalBtn',
     'txt-stand-still': 'standStill', 'txt-learning': 'learning',
     'txt-game-over': 'gameOver', 'txt-final-score': 'finalScore',
@@ -523,8 +524,6 @@ function renderInstructionSlide() {
         img.classList.remove('hidden');
     }
 
-    const isLast = instructionStep === slides.length - 1;
-    document.getElementById('txt-tap-continue').textContent = isLast ? dict.tapToStart : dict.tapToContinue;
     document.getElementById('instruction-prev').disabled = instructionStep === 0;
 }
 
@@ -536,15 +535,25 @@ function showInstructionsScreen() {
     renderInstructionSlide();
 }
 
+function finishInstructions() {
+    const video = document.getElementById('instruction-video');
+    video.pause();
+    document.getElementById('instructions-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
+}
+
 function advanceInstruction() {
     const slides = getInstructionSlides();
     if (instructionStep < slides.length - 1) {
         instructionStep++;
         renderInstructionSlide();
     } else {
-        document.getElementById('instructions-screen').classList.add('hidden');
-        document.getElementById('start-screen').classList.remove('hidden');
+        finishInstructions();
     }
+}
+
+function skipInstructions() {
+    finishInstructions();
 }
 
 function goBackInstruction() {
@@ -799,6 +808,7 @@ document.getElementById('warning-continue-btn').addEventListener('click', () => 
 document.getElementById('instruction-advance').addEventListener('click', advanceInstruction);
 document.getElementById('instruction-next').addEventListener('click', (e) => { e.stopPropagation(); advanceInstruction(); });
 document.getElementById('instruction-prev').addEventListener('click', (e) => { e.stopPropagation(); goBackInstruction(); });
+document.getElementById('instruction-skip').addEventListener('click', (e) => { e.stopPropagation(); skipInstructions(); });
 
 document.getElementById('start-btn').addEventListener('click', () => {
     audioCtx.resume();
