@@ -892,20 +892,20 @@ function drawCameraFeeds() {
     const vh = videoElement.videoHeight || 480;
 
     if (numPlayers === 1) {
-        // Draw raw — CSS scaleX(-1) mirrors it for the user
         ctxCamSingle.drawImage(videoElement, 0, 0, camSingle.width, camSingle.height);
     } else {
-        // P1 — LEFT half of raw video — draw mirrored so player sees themselves naturally
+        // cam-left (left side of screen) → RIGHT half of raw video (shows person standing on left)
         ctxCamLeft.save();
         ctxCamLeft.translate(camLeft.width, 0);
         ctxCamLeft.scale(-1, 1);
-        ctxCamLeft.drawImage(videoElement, 0, 0, vw / 2, vh, 0, 0, camLeft.width, camLeft.height);
+        ctxCamLeft.drawImage(videoElement, vw / 2, 0, vw / 2, vh, 0, 0, camLeft.width, camLeft.height);
         ctxCamLeft.restore();
-        // P2 — RIGHT half of raw video — draw mirrored
+
+        // cam-right (right side of screen) → LEFT half of raw video (shows person standing on right)
         ctxCamRight.save();
         ctxCamRight.translate(camRight.width, 0);
         ctxCamRight.scale(-1, 1);
-        ctxCamRight.drawImage(videoElement, vw / 2, 0, vw / 2, vh, 0, 0, camRight.width, camRight.height);
+        ctxCamRight.drawImage(videoElement, 0, 0, vw / 2, vh, 0, 0, camRight.width, camRight.height);
         ctxCamRight.restore();
     }
 }
@@ -936,10 +936,10 @@ function predictWebcam() {
 
 function onPoseResults(results) {
     if (!results.landmarks || results.landmarks.length === 0) return;
-    // Sort descending by X — higher X in raw video = left side of room = P1 (left board)
+    // Sort DESCENDING so poses[0] = left side of room (right side of raw video)
     // lower X in raw video = right side of room = P2 (right board)
     let poses = [...results.landmarks];
-    poses.sort((a, b) => a[0].x - b[0].x);
+    poses.sort((a, b) => b[0].x - a[0].x);  // highest X first = left side of room
 
     if (gameState === 'calibrating') {
         if (poses.length < numPlayers) {
@@ -956,7 +956,7 @@ function onPoseResults(results) {
         }
         document.getElementById('calibration-bar').style.width = `${(validFrames/CALIBRATION_REQUIRED_FRAMES)*100}%`;
         if (validFrames >= CALIBRATION_REQUIRED_FRAMES) {
-            for (let i = 0; i < numPlayers; i++) players[i].baseline /= CALIBRATION_REQUIRED_FRAMES;
+            for (let i =  0; i < numPlayers; i++) players[i].baseline /= CALIBRATION_REQUIRED_FRAMES;
             startGameplay();
         }
     } else if (gameState === 'playing') {
@@ -1298,12 +1298,8 @@ function drawStaticBackground() {
 }
 
 // ---- ORB SPAWNING ----
-function spawnOrb() {
-    // Spawn a random orb: 70% shield, 30% heart
-    const type = Math.random() < 0.5 ? 'shield' : 'heart';
-    const lane = [-1, 0, 1][Math.floor(Math.random() * 3)];
-    orbs.push({ lane, depth: 0, type, active: true, bobOffset: Math.random() * Math.PI * 2 });
-}
+let nextShieldScore = 50;  // First shield at 50 points
+let nextHeartScore = 100;  // First heart at 100 points
 
 // ---- ORB DRAWING ----
 function drawOrb(orb, subW) {
@@ -1786,8 +1782,24 @@ function gameLoop() {
             let baseSpawnRate = Math.max(40, 100 - Math.floor((4 + score/100) * 3));
             let spawnRate = Math.floor(baseSpawnRate / speedMultiplier);
             if (frameCount % spawnRate === 0) spawnObstacle();
-            // Spawn orbs less frequently than obstacles
-            if (frameCount % 90 === 45) spawnOrb();
+            // Score-based orb spawning — shields every 50, hearts every 100
+            if (Math.floor(score) >= nextShieldScore) {
+                // Spawn a shield orb at a random lane
+                const lane = [-1, 0, 1][Math.floor(Math.random() * 3)];
+                orbs.push({ lane, depth: 0, type: 'shield', active: true, bobOffset: Math.random() * Math.PI * 2 });
+                nextShieldScore += 50;
+                // Show notification
+                showOrbNotify('🛡️ Shield orb incoming!', 'rgba(6,182,212,0.95)');
+            }
+
+            if (Math.floor(score) >= nextHeartScore) {
+                // Spawn a heart orb at a random lane
+                const lane = [-1, 0, 1][Math.floor(Math.random() * 3)];
+                orbs.push({ lane, depth: 0, type: 'heart', active: true, bobOffset: Math.random() * Math.PI * 2 });
+                nextHeartScore += 100;
+                // Show notification
+                showOrbNotify('💗 Heart orb incoming!', 'rgba(236,72,153,0.95)');
+            }
         }
     }
 
