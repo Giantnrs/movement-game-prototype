@@ -332,10 +332,10 @@ const translations = {
         howToPlay: "Use your body movement to dodge obstacles!",
         instructionSkip: "Skip tutorial",
         instructionSlides: [
-            { media: "left.mp4", mediaType: "video", accent: "blue" },
-            { media: "right.mp4", mediaType: "video", accent: "blue" },
-            { media: "fly.png", mediaType: "image", accent: "purple" },
-            { media: "duck.png", mediaType: "image", accent: "green" },
+            { media: "left.mp4", mediaType: "video", accent: "blue", speech: "Raise your left arm to move left." },
+            { media: "right.mp4", mediaType: "video", accent: "blue", speech: "Raise your right arm to move right." },
+            { media: "fly.mp4", mediaType: "video", accent: "purple", speech: "Raise both arms to fly over obstacles." },
+            { media: "duck.mp4", mediaType: "video", accent: "green", speech: "Raise your arms like a T, or gently squat down to pass under the obstacle." },
             { media: "powerup.png", mediaType: "image", accent: "indigo" }
         ],
         ready: "Ready to move?",
@@ -360,11 +360,11 @@ const translations = {
         howToPlay: "Use your body movement to dodge obstacles!",
         instructionSkip: "Peke i te aratohu",
         instructionSlides: [
-            { media: "left.mp4", mediaType: "video", accent: "blue" },
-            { media: "right.mp4", mediaType: "video", accent: "blue" },
-            { media: "fly.png", mediaType: "image", accent: "purple" },
-            { media: "duck.png", mediaType: "image", accent: "green" },
-            { media: "powerup.png", mediaType: "image", accent: "indigo" }
+            { media: "left.mp4", mediaType: "video", accent: "blue", speech: "Raise your left arm to move left." },
+            { media: "right.mp4", mediaType: "video", accent: "blue", speech: "Raise your right arm to move right." },
+            { media: "fly.png", mediaType: "image", accent: "purple", speech: "Raise both arms to fly over obstacles." },
+            { media: "duck.mp4", mediaType: "image", accent: "green", speech: "Raise your arms like a T, or gently squat down to pass under the obstacle." },
+            { media: "powerup.mp4", mediaType: "image", accent: "indigo" }
         ],
         ready: "Kua reri?",
         readySub: "Hoki whakamuri kia kitea te tinana. Tū mārie i waenganui.",
@@ -493,6 +493,19 @@ function getInstructionSlides() {
     return translations[document.getElementById('lang-select').value].instructionSlides;
 }
 
+function stopInstructionSpeech() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
+function speakInstruction(text) {
+    if (!text || !window.speechSynthesis) return;
+    stopInstructionSpeech();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.95;
+    window.speechSynthesis.speak(utterance);
+}
+
 function renderInstructionSlide() {
     const slides = getInstructionSlides();
     const slide = slides[instructionStep];
@@ -525,6 +538,9 @@ function renderInstructionSlide() {
     }
 
     document.getElementById('instruction-prev').disabled = instructionStep === 0;
+
+    stopInstructionSpeech();
+    if (slide.speech) speakInstruction(slide.speech);
 }
 
 function showInstructionsScreen() {
@@ -536,6 +552,7 @@ function showInstructionsScreen() {
 }
 
 function finishInstructions() {
+    stopInstructionSpeech();
     const video = document.getElementById('instruction-video');
     video.pause();
     document.getElementById('instructions-screen').classList.add('hidden');
