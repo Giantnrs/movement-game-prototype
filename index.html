@@ -292,6 +292,13 @@
                     </div>
                 </div>
 
+                <div id="health-tip-card" class="mb-6 text-left bg-emerald-50 dark:bg-emerald-950/50 border-2 border-emerald-200 dark:border-emerald-800 rounded-2xl p-5 shadow-inner">
+                    <p id="txt-health-tip-label" class="text-xs uppercase tracking-widest text-emerald-700 dark:text-emerald-400 font-black mb-2">Health tip</p>
+                    <h3 id="health-tip-title" class="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight"></h3>
+                    <p id="health-tip-body" class="text-lg md:text-xl text-gray-700 dark:text-gray-300 font-medium leading-relaxed"></p>
+                    <p id="txt-health-tip-source" class="mt-4 text-sm md:text-base text-emerald-800/75 dark:text-emerald-300/80 font-semibold text-right">Source: NZ Ministry of Health</p>
+                </div>
+
                 <button id="restart-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl w-full">
                     Return to Dashboard
                 </button>
@@ -342,6 +349,8 @@ const translations = {
         readySub: "Step back so your upper body is visible. Stand still in the center to calibrate.",
         startCalBtn: "Start Calibration", standStill: "Stand Still...", learning: "Learning your neutral pose.",
         gameOver: "Great Job!", finalScore: "Score: ", returnDash: "Return to Dashboard",
+        healthTipLabel: "Health tip",
+        healthTipSource: "Source: NZ Ministry of Health",
         hudScore1p: "Score", hudLives1p: "Lives", hudActivity1p: "Activity", hudSquats1p: "Squats", hudJumps1p: "Jumps",
         speedNormal: "Normal Mode", speedChill: "Chill Mode"
     },
@@ -370,10 +379,39 @@ const translations = {
         readySub: "Hoki whakamuri kia kitea te tinana. Tū mārie i waenganui.",
         startCalBtn: "Tīmata", standStill: "Tū Mārie...", learning: "E ako ana i tō tūnga.",
         gameOver: "Ka Rawe!", finalScore: "Kaute: ", returnDash: "Hoki ki te Pīhono",
+        healthTipLabel: "Kupu hauora",
+        healthTipSource: "Pūtake: Manatū Hauora — NZ Ministry of Health",
         hudScore1p: "Kaute", hudLives1p: "Oranga", hudActivity1p: "Mahi", hudSquats1p: "Piko", hudJumps1p: "Peke",
         speedNormal: "Mahi Pūnoa", speedChill: "Mahi Whakatā"
     }
 };
+
+const HEALTH_TIPS = [
+    {
+        title: "Every move counts",
+        body: "Be as active as you can — any amount of movement is better than none, in whatever way works for you."
+    },
+    {
+        title: "Sitting doesn't mean stopping!",
+        body: "Chair-based stretching and resistance exercises still count toward your activity goals."
+    },
+    {
+        title: "Start small, grow strong",
+        body: "Build up your activity gradually — even a little more each week makes a real difference."
+    },
+    {
+        title: "Ask your doctor first",
+        body: "Before trying new exercises, check with your health practitioner — especially if you're just starting out."
+    },
+    {
+        title: "Variety keeps you well",
+        body: "Aim for a mix of gentle aerobic movement, resistance, balance, and flexibility — all adaptable to your ability."
+    },
+    {
+        title: "Don't forget vitamin D",
+        body: "Talk to your doctor about whether vitamin D supplements would benefit you — it's great for bones and muscles."
+    }
+];
 
 const elementsToTranslate = {
     'txt-theme-dark': 'themeDark', 'txt-theme-light': 'themeLight',
@@ -390,6 +428,8 @@ const elementsToTranslate = {
     'txt-ready': 'ready', 'txt-ready-sub': 'readySub', 'start-btn': 'startCalBtn',
     'txt-stand-still': 'standStill', 'txt-learning': 'learning',
     'txt-game-over': 'gameOver', 'txt-final-score': 'finalScore',
+    'txt-health-tip-label': 'healthTipLabel',
+    'txt-health-tip-source': 'healthTipSource',
     'restart-btn': 'returnDash',
     'txt-hud-score-1p': 'hudScore1p', 'txt-hud-lives-1p': 'hudLives1p', 'txt-hud-activity-1p': 'hudActivity1p',
     'txt-hud-squats-1p': 'hudSquats1p', 'txt-hud-jumps-1p': 'hudJumps1p',
@@ -974,6 +1014,10 @@ function gameOver() {
     } else {
         document.getElementById('final-p2-container').classList.add('hidden');
     }
+
+    const tip = HEALTH_TIPS[Math.floor(Math.random() * HEALTH_TIPS.length)];
+    document.getElementById('health-tip-title').textContent = tip.title;
+    document.getElementById('health-tip-body').textContent = tip.body;
 }
 
 function drawObstacle(obs, subW) {
