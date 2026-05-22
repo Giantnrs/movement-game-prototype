@@ -30,11 +30,78 @@
         .pointer-events-auto { pointer-events: auto; }
         .hidden { display: none !important; }
         
-        input:focus, select:focus, button:focus {
+        input:focus, select:focus {
+            outline: 4px solid #3b82f6;
+            outline-offset: 2px;
+        }
+        button:focus {
+            outline: none;
+        }
+        button:focus-visible {
             outline: 4px solid #3b82f6;
             outline-offset: 2px;
         }
         #center-screens { overflow-y: auto; }
+        #instructions-screen { pointer-events: auto; overflow: hidden; }
+        #instruction-image[src=""],
+        #instruction-video[src=""] { display: none; }
+        #instructions-screen .instruction-media-frame {
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
+        }
+        #instruction-image:not(.hidden),
+        #instruction-video:not(.hidden) {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+        }
+        #instruction-skip {
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            font-weight: 900;
+            transition: background-color 0.15s ease, transform 0.15s ease;
+        }
+        #instruction-skip:hover { transform: scale(1.02); }
+        #instruction-skip:active { transform: scale(0.98); }
+        #instruction-mute {
+            width: 3rem;
+            height: 3rem;
+            align-self: flex-end;
+            flex-shrink: 0;
+            border-radius: 0.625rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+            transition: background-color 0.15s ease, transform 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+            background-color: rgba(99, 102, 241, 0.12);
+            border: 2px solid rgba(99, 102, 241, 0.45);
+            color: #4f46e5;
+        }
+        #instruction-mute:hover { transform: scale(1.05); }
+        #instruction-mute:active { transform: scale(0.95); }
+        .dark #instruction-mute {
+            background-color: rgba(99, 102, 241, 0.22);
+            border-color: rgba(129, 140, 248, 0.55);
+            color: #a5b4fc;
+        }
+        #instruction-mute:hover {
+            background-color: rgba(99, 102, 241, 0.2);
+        }
+        .dark #instruction-mute:hover {
+            background-color: rgba(99, 102, 241, 0.32);
+        }
+        #instruction-mute[aria-pressed="true"] {
+            background-color: #f3f4f6;
+            border-color: #d1d5db;
+            color: #6b7280;
+        }
+        .dark #instruction-mute[aria-pressed="true"] {
+            background-color: #1f2937;
+            border-color: #4b5563;
+            color: #9ca3af;
+        }
 
         /* Shield orb pulse */
         @keyframes shieldPulse {
@@ -318,32 +385,49 @@
                 <p id="txt-warning-1" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-6">
                     Please play in a clear, dry, non-slip area with enough room to move both arms.
                 </p>
-                <ul class="text-gray-700 dark:text-amber-100/95 text-xl font-medium leading-relaxed space-y-4 mb-8 list-disc pl-6">
-                    <li id="txt-warning-2">Go at your own pace and hold nearby support if needed.</li>
-                    <li id="txt-warning-3">Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.</li>
-                </ul>
+                <p id="txt-warning-2" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-6">
+                    Go at your own pace and hold nearby support if needed.
+                </p>
+                <p id="txt-warning-3" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-8">
+                    Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.
+                </p>
                 <button type="button" id="warning-continue-btn" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-black py-5 px-6 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-2xl md:text-3xl w-full">
                     I understand
                 </button>
             </div>
 
             <!-- How to play (5 steps) -->
-            <div id="instructions-screen" class="hidden fixed inset-0 z-40 flex flex-col items-center justify-center bg-slate-100/95 dark:bg-[#1a202c]/95 backdrop-blur-md text-gray-900 dark:text-white pointer-events-auto overflow-y-auto p-4 md:p-6">
-                <div class="w-full max-w-5xl bg-white/95 dark:bg-gray-900/95 rounded-3xl border-4 border-indigo-500/40 shadow-2xl backdrop-blur-md flex flex-col max-h-[95vh]">
-                <header class="text-center pt-6 md:pt-8 pb-4 px-6 shrink-0 border-b-2 border-gray-200 dark:border-gray-700">
+            <div id="instructions-screen" class="hidden fixed inset-0 z-40 flex flex-col bg-slate-100/95 dark:bg-[#1a202c]/95 backdrop-blur-md text-gray-900 dark:text-white pointer-events-auto p-4 md:p-6 min-h-0">
+                <div class="w-full max-w-5xl mx-auto flex flex-col flex-1 min-h-0 bg-white/95 dark:bg-gray-900/95 rounded-3xl border-4 border-indigo-500/40 shadow-2xl backdrop-blur-md overflow-hidden">
+                <header class="text-center pt-6 md:pt-8 pb-4 px-6 pr-28 md:pr-36 shrink-0 border-b-2 border-gray-200 dark:border-gray-700 relative">
+                    <div class="instruction-header-actions absolute top-4 right-4 md:top-6 md:right-6 z-10 flex flex-col items-end gap-1.5">
+                        <button type="button" id="instruction-skip" class="bg-indigo-600 hover:bg-indigo-500 text-white py-3 px-4 md:py-3 md:px-5 text-base md:text-lg whitespace-nowrap">
+                            Skip tutorial
+                        </button>
+                        <button type="button" id="instruction-mute" class="flex items-center justify-center" aria-label="Mute voice" aria-pressed="false">
+                            <svg id="instruction-mute-icon-on" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                            </svg>
+                            <svg id="instruction-mute-icon-off" class="w-6 h-6 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <line x1="23" y1="1" x2="1" y2="23"></line>
+                            </svg>
+                        </button>
+                    </div>
                     <h1 id="txt-instruction-screen-title" class="text-3xl md:text-5xl font-black tracking-tight text-gray-900 dark:text-white">Active Runner - How to play</h1>
                     <p id="txt-how-to-play" class="text-xl md:text-2xl text-indigo-600 dark:text-indigo-400 font-bold mt-2">Use your body movement to dodge obstacles!</p>
                 </header>
-                <div class="flex-1 flex items-stretch justify-center px-4 md:px-6 py-4 min-h-0 overflow-y-auto">
-                    <button type="button" id="instruction-advance" class="w-full text-left cursor-pointer group focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400 rounded-2xl">
-                        <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl shadow-inner overflow-hidden border-2 border-gray-200 dark:border-gray-600 group-hover:scale-[1.01] group-active:scale-[0.99] transition-transform">
-                            <div class="p-4 md:p-6 bg-white dark:bg-gray-900 flex items-center justify-center min-h-[320px] md:min-h-[420px]">
-                                <div class="w-full h-full min-h-[280px] md:min-h-[380px] rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
-                                    <video id="instruction-video" class="max-w-full max-h-full w-full h-full object-contain hidden" autoplay loop muted playsinline></video>
-                                    <img id="instruction-image" src="" alt="" class="max-w-full max-h-full w-full h-full object-contain hidden" />
+                <div class="flex-1 flex items-stretch justify-center px-4 md:px-6 py-2 min-h-0 overflow-hidden">
+                    <button type="button" id="instruction-advance" class="w-full h-full min-h-0 text-left cursor-pointer group focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400 rounded-2xl flex flex-col">
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl shadow-inner overflow-hidden border-2 border-gray-200 dark:border-gray-600 group-hover:scale-[1.01] group-active:scale-[0.99] transition-transform flex-1 min-h-0 flex flex-col">
+                            <div class="p-1 md:p-2 bg-white dark:bg-gray-900 flex flex-1 min-h-0 w-full overflow-hidden">
+                                <div class="instruction-media-frame w-full h-full">
+                                    <video id="instruction-video" class="hidden" autoplay loop muted playsinline></video>
+                                    <img id="instruction-image" src="" alt="" class="hidden" />
                                 </div>
                             </div>
-                            <p id="txt-tap-continue" class="text-center text-sm md:text-base font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 py-3 border-t border-indigo-200 dark:border-indigo-800">Tap anywhere to continue</p>
                         </div>
                     </button>
                 </div>
@@ -515,13 +599,15 @@ const translations = {
         healthTipLabel: "Health tip", healthTipSource: "Source: NZ Ministry of Health",
         instructionScreenTitle: "Active Runner - How to play",
         howToPlay: "Use your body movement to dodge obstacles!",
-        tapToContinue: "Tap anywhere to continue", tapToStart: "Tap to start calibration",
+        instructionSkip: "Skip tutorial",
+        instructionMute: "Mute",
+        instructionUnmute: "Unmute",
         instructionSlides: [
-            { media: "left.mp4", mediaType: "video", accent: "blue" },
-            { media: "right.mp4", mediaType: "video", accent: "blue" },
-            { media: "fly.png", mediaType: "image", accent: "purple" },
-            { media: "duck.png", mediaType: "image", accent: "green" },
-            { media: "powerup.png", mediaType: "image", accent: "indigo" }
+            { media: "left.mp4", mediaType: "video", accent: "blue", voice: "voice prompt/left.mp3" },
+            { media: "right.mp4", mediaType: "video", accent: "blue", voice: "voice prompt/right.mp3" },
+            { media: "fly.mp4", mediaType: "video", accent: "purple", voice: "voice prompt/fly.mp3" },
+            { media: "duck.mp4", mediaType: "video", accent: "green", voice: "voice prompt/duck.mp3" },
+            { media: "powerup.jpg", mediaType: "image", accent: "indigo", subtitle: "✨POWER UP✨", voice: "voice prompt/powerup.mp3" }
         ]
     },
     mi: {
@@ -543,13 +629,15 @@ const translations = {
         healthTipLabel: "Kupu hauora", healthTipSource: "Pūtake: Manatū Hauora — NZ Ministry of Health",
         instructionScreenTitle: "Active Runner - How to play",
         howToPlay: "Use your body movement to dodge obstacles!",
-        tapToContinue: "Pāwhiri kia haere tonu", tapToStart: "Pāwhiri kia tīmata te whakatau",
+        instructionSkip: "Peke i te aratohu",
+        instructionMute: "Whakakore oro",
+        instructionUnmute: "Whakakā oro",
         instructionSlides: [
-            { media: "left.mp4", mediaType: "video", accent: "blue" },
-            { media: "right.mp4", mediaType: "video", accent: "blue" },
-            { media: "fly.png", mediaType: "image", accent: "purple" },
-            { media: "duck.png", mediaType: "image", accent: "green" },
-            { media: "powerup.png", mediaType: "image", accent: "indigo" }
+            { media: "left.mp4", mediaType: "video", accent: "blue", voice: "voice prompt/left.mp3" },
+            { media: "right.mp4", mediaType: "video", accent: "blue", voice: "voice prompt/right.mp3" },
+            { media: "fly.mp4", mediaType: "video", accent: "purple", voice: "voice prompt/fly.mp3" },
+            { media: "duck.mp4", mediaType: "video", accent: "green", voice: "voice prompt/duck.mp3" },
+            { media: "powerup.jpg", mediaType: "image", accent: "indigo", subtitle: "✨POWER UP✨", voice: "voice prompt/powerup.mp3" }
         ]
     }
 };
@@ -571,7 +659,8 @@ const elementsToTranslate = {
     'txt-hud-squats-1p': 'hudSquats1p', 'txt-hud-jumps-1p': 'hudJumps1p',
     'btn-speed-normal': 'speedNormal', 'btn-speed-chill': 'speedChill',
     'txt-health-tip-label': 'healthTipLabel', 'txt-health-tip-source': 'healthTipSource',
-    'txt-instruction-screen-title': 'instructionScreenTitle', 'txt-how-to-play': 'howToPlay'
+    'txt-instruction-screen-title': 'instructionScreenTitle', 'txt-how-to-play': 'howToPlay',
+    'instruction-skip': 'instructionSkip'
 };
 
 function updateLanguage(lang) {
@@ -585,6 +674,7 @@ function updateLanguage(lang) {
         document.getElementById('txt-hello').textContent = dict.hello + currentPlayerName + "!";
     }
     if (!document.getElementById('instructions-screen').classList.contains('hidden')) {
+        updateInstructionMuteButton();
         renderInstructionSlide();
     }
     localStorage.setItem('game_lang', lang);
@@ -600,6 +690,47 @@ const HEALTH_TIPS = [
 ];
 
 let instructionStep = 0;
+let instructionVoiceMuted = localStorage.getItem('instruction_voice_muted') === 'true';
+let instructionVoiceAudio = null;
+
+function stopInstructionVoice() {
+    if (instructionVoiceAudio) {
+        instructionVoiceAudio.pause();
+        instructionVoiceAudio.currentTime = 0;
+        instructionVoiceAudio = null;
+    }
+}
+
+function playInstructionVoice(src) {
+    if (instructionVoiceMuted || !src) return;
+    stopInstructionVoice();
+    instructionVoiceAudio = new Audio(src);
+    instructionVoiceAudio.play().catch(() => {});
+}
+
+function updateInstructionMuteButton() {
+    const btn = document.getElementById('instruction-mute');
+    const iconOn = document.getElementById('instruction-mute-icon-on');
+    const iconOff = document.getElementById('instruction-mute-icon-off');
+    if (!btn || !iconOn || !iconOff) return;
+    const dict = translations[document.getElementById('lang-select').value];
+    iconOn.classList.toggle('hidden', instructionVoiceMuted);
+    iconOff.classList.toggle('hidden', !instructionVoiceMuted);
+    btn.setAttribute('aria-pressed', String(instructionVoiceMuted));
+    btn.setAttribute('aria-label', instructionVoiceMuted ? dict.instructionUnmute : dict.instructionMute);
+}
+
+function toggleInstructionMute() {
+    instructionVoiceMuted = !instructionVoiceMuted;
+    localStorage.setItem('instruction_voice_muted', instructionVoiceMuted);
+    updateInstructionMuteButton();
+    if (instructionVoiceMuted) {
+        stopInstructionVoice();
+    } else {
+        const slide = getInstructionSlides()[instructionStep];
+        if (slide.voice) playInstructionVoice(slide.voice);
+    }
+}
 
 function getInstructionSlides() {
     return translations[document.getElementById('lang-select').value].instructionSlides;
@@ -610,6 +741,7 @@ function renderInstructionSlide() {
     const slide = slides[instructionStep];
     const dict = translations[document.getElementById('lang-select').value];
 
+    document.getElementById('txt-how-to-play').textContent = slide.subtitle ?? dict.howToPlay;
     document.getElementById('instruction-page-current').textContent = String(instructionStep + 1);
     document.getElementById('instruction-page-total').textContent = String(slides.length);
 
@@ -635,15 +767,25 @@ function renderInstructionSlide() {
         img.classList.remove('hidden');
     }
 
-    const isLast = instructionStep === slides.length - 1;
-    document.getElementById('txt-tap-continue').textContent = isLast ? dict.tapToStart : dict.tapToContinue;
     document.getElementById('instruction-prev').disabled = instructionStep === 0;
+
+    stopInstructionVoice();
+    if (slide.voice) playInstructionVoice(slide.voice);
 }
 
 function showInstructionsScreen() {
     instructionStep = 0;
     document.getElementById('instructions-screen').classList.remove('hidden');
+    updateInstructionMuteButton();
     renderInstructionSlide();
+}
+
+function finishInstructions() {
+    stopInstructionVoice();
+    const video = document.getElementById('instruction-video');
+    video.pause();
+    document.getElementById('instructions-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
 }
 
 function advanceInstruction() {
@@ -652,9 +794,12 @@ function advanceInstruction() {
         instructionStep++;
         renderInstructionSlide();
     } else {
-        document.getElementById('instructions-screen').classList.add('hidden');
-        document.getElementById('start-screen').classList.remove('hidden');
+        finishInstructions();
     }
+}
+
+function skipInstructions() {
+    finishInstructions();
 }
 
 function goBackInstruction() {
@@ -1170,6 +1315,8 @@ document.getElementById('warning-continue-btn').addEventListener('click', () => 
 document.getElementById('instruction-advance').addEventListener('click', advanceInstruction);
 document.getElementById('instruction-next').addEventListener('click', (e) => { e.stopPropagation(); advanceInstruction(); });
 document.getElementById('instruction-prev').addEventListener('click', (e) => { e.stopPropagation(); goBackInstruction(); });
+document.getElementById('instruction-skip').addEventListener('click', (e) => { e.stopPropagation(); skipInstructions(); });
+document.getElementById('instruction-mute').addEventListener('click', (e) => { e.stopPropagation(); toggleInstructionMute(); });
 
 document.getElementById('start-btn').addEventListener('click', () => {
     audioCtx.resume();
