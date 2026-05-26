@@ -494,9 +494,10 @@
         <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto z-20" id="center-screens">
 
             <!-- DAILY STREAK SCREEN -->
-            <div id="streak-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl card-teal text-center max-w-xl w-[90%] backdrop-blur-md hidden">
+            <div id="streak-screen" class="relative bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl card-teal text-center max-w-xl w-[90%] backdrop-blur-md hidden">
+                <button id="btn-streak-back" class="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-500 dark:hover:border-gray-300 hover:text-gray-800 dark:hover:text-gray-100 text-xl font-bold transition hover:scale-105 active:scale-95">←</button>
                 <!-- Title -->
-                <div class="flex items-center justify-center gap-3 mb-2">
+                <div class="flex items-center justify-center gap-3 mb-2 mt-2">
                     <span class="text-4xl">🔥</span>
                     <h1 class="text-4xl font-black text-indigo-600 dark:text-indigo-400">Daily Play Streak</h1>
                 </div>
@@ -523,10 +524,6 @@
                     </div>
                 </div>
 
-                <!-- Warning -->
-                <div class="bg-indigo-50 border-2 border-indigo-400 rounded-2xl px-6 py-4 mb-6">
-                    <p class="text-indigo-700 font-black text-xl">Miss a day and your streak resets to 0!</p>
-                </div>
 
                 <!-- Next button -->
                 <button id="btn-streak-next" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl">
@@ -535,7 +532,8 @@
             </div>
 
             <!-- DASHBOARD SCREEN -->
-            <div id="dashboard-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl card-teal text-center max-w-xl w-[95%] backdrop-blur-md hidden mt-4 mb-4">
+            <div id="dashboard-screen" class="relative bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl card-teal text-center max-w-xl w-[95%] backdrop-blur-md hidden mt-4 mb-4">
+                <button id="btn-dashboard-back" class="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-500 dark:hover:border-gray-300 hover:text-gray-800 dark:hover:text-gray-100 text-xl font-bold transition hover:scale-105 active:scale-95">←</button>
                 <h1 id="txt-hello" class="text-4xl md:text-5xl font-black mb-8 text-gray-900 dark:text-white">Hello, </h1>
                 
                 <div class="flex flex-col gap-4">
@@ -577,6 +575,7 @@
 
             <!-- Warning screen -->
             <div id="warning-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 md:p-10 rounded-3xl card-teal text-left max-w-2xl w-[90%] backdrop-blur-md hidden">
+                <button id="btn-warning-back" class="w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-500 dark:hover:border-gray-300 hover:text-gray-800 dark:hover:text-gray-100 text-xl font-bold transition hover:scale-105 active:scale-95 mb-4">←</button>
                 <div class="flex items-center justify-between mb-6 border-b-2 border-amber-200 dark:border-amber-900 pb-2">
                     <h2 id="txt-warning-title" class="text-4xl md:text-5xl font-black text-amber-600 dark:text-amber-400">Safety Warning</h2>
                     <button type="button" id="warning-read-btn" onclick="toggleWarningRead()" title="Read aloud"
@@ -646,7 +645,8 @@
             </div>
 
             <!-- Start / Calibrate -->
-            <div id="start-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl card-teal text-center max-w-lg w-[90%] backdrop-blur-md hidden">
+            <div id="start-screen" class="relative bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl card-teal text-center max-w-lg w-[90%] backdrop-blur-md hidden">
+                <button id="btn-start-back" class="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-500 dark:hover:border-gray-300 hover:text-gray-800 dark:hover:text-gray-100 text-xl font-bold transition hover:scale-105 active:scale-95">←</button>
                 <h1 id="txt-ready" class="text-5xl font-black mb-6 text-gray-900 dark:text-white">Ready to move?</h1>
                 <p id="txt-ready-sub" class="text-2xl text-gray-700 dark:text-gray-300 mb-6 font-semibold">Step back so your upper body is visible. Stand still in the center to calibrate.</p>
 
@@ -662,7 +662,8 @@
             </div>
 
             <!-- Calibration Progress -->
-            <div id="calibration-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl card-teal text-center max-w-lg w-[90%] backdrop-blur-md hidden">
+            <div id="calibration-screen" class="relative bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl card-teal text-center max-w-lg w-[90%] backdrop-blur-md hidden">
+                <button id="btn-calibration-back" class="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-500 dark:hover:border-gray-300 hover:text-gray-800 dark:hover:text-gray-100 text-xl font-bold transition hover:scale-105 active:scale-95">←</button>
                 <h2 id="txt-stand-still" class="text-4xl font-black mb-6 text-yellow-600 dark:text-yellow-400">Stand Still...</h2>
                 <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-8 mb-6 border-2 border-gray-300 dark:border-gray-600">
                     <div id="calibration-bar" class="bg-yellow-400 h-full rounded-full transition-all duration-100" style="width: 0%"></div>
@@ -671,7 +672,8 @@
             </div>
 
             <!-- Game Over -->
-            <div id="game-over-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl card-teal text-center max-w-2xl w-[90%] backdrop-blur-md hidden" style="max-height:90vh;overflow-y:auto;">
+            <div id="game-over-screen" class="relative bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl card-teal text-center max-w-2xl w-[90%] backdrop-blur-md hidden" style="max-height:90vh;overflow-y:auto;">
+                <button id="btn-play-again" title="Play Again" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-green-500 dark:hover:border-green-400 hover:text-green-600 dark:hover:text-green-400 text-xl font-bold transition hover:scale-105 active:scale-95">↺</button>
                 <h1 id="txt-game-over" class="text-4xl font-black mb-2 text-green-600 dark:text-green-400">Great Job!</h1>
 
                 <!-- Winner banner — 2P mode only -->
@@ -1143,12 +1145,25 @@ function getLBKey() {
     return speedMultiplier < 1 ? 'game_leaderboard_chill' : 'game_leaderboard_normal';
 }
 
-function getLeaderboard() {
-    const defaultBoard = [
-        { name: "WaikatoChamp", score: 850 }, { name: "Sarah123", score: 620 }, { name: "TeKauri", score: 430 }
+function getDefaultBoard(key) {
+    if (key === 'game_leaderboard_chill') {
+        return [
+            { name: "NanaTui",   score: 27 },
+            { name: "KoroHec",   score: 21 },
+            { name: "AuntyBev",  score: 14 }
+        ];
+    }
+    return [
+        { name: "WaikatoChamp", score: 850 },
+        { name: "Sarah123",     score: 620 },
+        { name: "TeKauri",      score: 430 }
     ];
-    const stored = localStorage.getItem(getLBKey());
-    return stored ? JSON.parse(stored) : defaultBoard;
+}
+
+function getLeaderboard() {
+    const key = getLBKey();
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : getDefaultBoard(key);
 }
 
 function saveScore(newScore) {
@@ -1167,11 +1182,8 @@ function renderLeaderboard() {
     tbody.innerHTML = '';
     // Show the tab that's selected, not the current game mode
     const key = lbViewTab === 'chill' ? 'game_leaderboard_chill' : 'game_leaderboard_normal';
-    const defaultBoard = [
-        { name: "WaikatoChamp", score: 850 }, { name: "Sarah123", score: 620 }, { name: "TeKauri", score: 430 }
-    ];
     const stored = localStorage.getItem(key);
-    const board = stored ? JSON.parse(stored) : defaultBoard;
+    const board = stored ? JSON.parse(stored) : getDefaultBoard(key);
     board.forEach((player, index) => {
         const tr = document.createElement('tr');
         tr.className = "border-b border-gray-200 dark:border-gray-700 last:border-0";
@@ -1187,11 +1199,8 @@ function renderGameOverLeaderboard() {
     if (!tbody) return;
     tbody.innerHTML = '';
     const key = goLBTab === 'chill' ? 'game_leaderboard_chill' : 'game_leaderboard_normal';
-    const defaultBoard = [
-        { name: "WaikatoChamp", score: 850 }, { name: "Sarah123", score: 620 }, { name: "TeKauri", score: 430 }
-    ];
     const stored = localStorage.getItem(key);
-    const board = stored ? JSON.parse(stored) : defaultBoard;
+    const board = stored ? JSON.parse(stored) : getDefaultBoard(key);
     board.forEach((player, index) => {
         const isCurrentPlayer = (player.name === currentPlayerName || player.name === currentPlayer2Name);
         const tr = document.createElement('tr');
@@ -1233,6 +1242,7 @@ let gameState = 'login';
 let score = 0, speed = 4, frameCount = 0, obstacles = [], gameLoopId;
 let speedMultiplier = 1; // 1 = Normal, 0.25 = Chill
 let levelUpTimer = 0, nextMilestone = 100;
+let skyEffectsEnabled = false, skyStarBase = [], skyParticles = [];
 const CALIBRATION_REQUIRED_FRAMES = 60; 
 
 // ORB SYSTEM
@@ -1627,11 +1637,41 @@ document.getElementById('btn-continue').addEventListener('click', () => {
     document.getElementById('login-screen-wrap').classList.add('hidden');
     document.getElementById('streak-screen').classList.remove('hidden');
     gameState = 'dashboard';
+    if (streak >= 3 && typeof startFireworks === 'function') startFireworks();
+});
+
+// ── Back button navigation ──
+document.getElementById('btn-streak-back').addEventListener('click', () => {
+    document.getElementById('streak-screen').classList.add('hidden');
+    document.getElementById('login-screen-wrap').classList.remove('hidden');
+    if (typeof stopFireworks === 'function') stopFireworks();
+});
+
+document.getElementById('btn-dashboard-back').addEventListener('click', () => {
+    document.getElementById('dashboard-screen').classList.add('hidden');
+    document.getElementById('login-screen-wrap').classList.remove('hidden');
+});
+
+document.getElementById('btn-warning-back').addEventListener('click', () => {
+    document.getElementById('warning-screen').classList.add('hidden');
+    document.getElementById('dashboard-screen').classList.remove('hidden');
+});
+
+document.getElementById('btn-start-back').addEventListener('click', () => {
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('dashboard-screen').classList.remove('hidden');
+});
+
+document.getElementById('btn-calibration-back').addEventListener('click', () => {
+    gameState = 'loading';
+    document.getElementById('calibration-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
 });
 
 document.getElementById('btn-streak-next').addEventListener('click', () => {
     document.getElementById('streak-screen').classList.add('hidden');
     document.getElementById('dashboard-screen').classList.remove('hidden');
+    if (typeof stopFireworks === 'function') stopFireworks();
     updateLanguage(document.getElementById('lang-select').value);
     renderLeaderboard();
 });
@@ -1755,6 +1795,28 @@ document.getElementById('restart-btn').addEventListener('click', () => {
     renderLeaderboard();
 });
 
+document.getElementById('btn-play-again').addEventListener('click', () => {
+    // Reset game-over screen state
+    document.getElementById('game-over-screen').classList.remove('mode-2p');
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('winner-stamp-p1').classList.remove('show');
+    document.getElementById('winner-stamp-p2').classList.remove('show');
+    if (document.getElementById('winner-banner')) document.getElementById('winner-banner').classList.add('hidden');
+    document.getElementById('gameover-lb-wrap').classList.add('hidden');
+    document.getElementById('shield-active-hud').classList.add('hidden');
+    // Jump straight to calibration — skip warning & tutorial
+    document.getElementById('calibration-screen').classList.remove('hidden');
+    document.getElementById('calibration-bar').style.width = '0%';
+    for (let i = 0; i < numPlayers; i++) {
+        players[i].baseline = 0; players[i].calibrationFrames = 0;
+        players[i].homeX = undefined; players[i].homeXSum = 0;
+    }
+    document.getElementById('txt-learning').innerText = 'Get ready…';
+    audioCtx.resume();
+    gameState = 'pre-calibrating';
+    setTimeout(() => { gameState = 'calibrating'; }, 1000);
+});
+
 /**
  * GAME ENGINE & RENDERING
  */
@@ -1774,6 +1836,58 @@ function drawBackground(canvasW) {
     const isDark = document.documentElement.classList.contains('dark');
     ctx.fillStyle = isDark ? '#0f172a' : '#bae6fd'; ctx.fillRect(0, 0, canvasW, horizonY);
     ctx.fillStyle = isDark ? '#1e293b' : '#bbf7d0'; ctx.fillRect(0, horizonY, canvasW, gameHeight - horizonY);
+
+    // ── Sky visual effects (unlocked at 100 pts) ──
+    if (skyEffectsEnabled) {
+        // Twinkling stars
+        skyStarBase.forEach(s => {
+            s.twinkle += 0.035;
+            const alpha = 0.3 + Math.sin(s.twinkle) * 0.45;
+            const sx = s.x * canvasW / gameWidth;
+            ctx.beginPath();
+            ctx.arc(sx, s.y, s.r, 0, Math.PI * 2);
+            ctx.fillStyle = isDark
+                ? `rgba(255,255,210,${Math.max(0, alpha)})`
+                : `rgba(255,255,255,${Math.max(0, alpha * 0.85)})`;
+            ctx.fill();
+        });
+
+        // Spawn shooting stars occasionally
+        if (Math.random() < 0.008) {
+            skyParticles.push({
+                x:  Math.random() * canvasW * 0.7,
+                y:  Math.random() * horizonY * 0.55,
+                vx: 6 + Math.random() * 6,
+                vy: 1.5 + Math.random() * 2.5,
+                life: 1.0,
+                len: 55 + Math.random() * 65,
+                color: isDark ? 'rgba(180,220,255,' : 'rgba(255,255,255,'
+            });
+        }
+
+        skyParticles = skyParticles.filter(p => p.life > 0);
+        skyParticles.forEach(p => {
+            ctx.save();
+            ctx.globalAlpha = p.life;
+            const tailLen = p.len * p.life;
+            const grad = ctx.createLinearGradient(p.x, p.y, p.x - p.vx / Math.hypot(p.vx, p.vy) * tailLen,
+                                                            p.y - p.vy / Math.hypot(p.vx, p.vy) * tailLen);
+            grad.addColorStop(0,   p.color + '0.95)');
+            grad.addColorStop(1,   p.color + '0)');
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x - p.vx / Math.hypot(p.vx, p.vy) * tailLen,
+                       p.y - p.vy / Math.hypot(p.vx, p.vy) * tailLen);
+            ctx.stroke();
+            ctx.restore();
+            p.x += p.vx; p.y += p.vy;
+            p.life -= 0.018;
+        });
+    }
+
     ctx.strokeStyle = isDark ? '#334155' : '#ffffff'; ctx.lineWidth = 6;
     
     const pFarLeft = getScreenPos(-1.5, 0, canvasW), pFarRight = getScreenPos(1.5, 0, canvasW);
@@ -1939,6 +2053,7 @@ function startGameplay() {
     
     gameState = 'playing'; score = 0; speed = 4; frameCount = 0; obstacles = []; orbs = [];
     levelUpTimer = 0; nextMilestone = 100; streakBonusGranted = false;
+    skyEffectsEnabled = false; skyStarBase = []; skyParticles = [];
     
     for (let i=0; i<numPlayers; i++) {
         players[i].lives = 3; players[i].lane = 0; players[i].stats = {squats: 0, jumps: 0}; players[i].score = 0;
@@ -2280,7 +2395,17 @@ function gameLoop() {
         if (score >= nextMilestone && nextMilestone <= 400) {
             levelUpTimer = 300;
             let msg = "";
-            if (nextMilestone === 100) msg = "Jump over three row obstacles!";
+            if (nextMilestone === 100) {
+                msg = "Jump over three row obstacles!";
+                // Unlock sky visual effects
+                skyEffectsEnabled = true;
+                skyStarBase = Array.from({ length: 28 }, () => ({
+                    x: Math.random() * gameWidth,
+                    y: Math.random() * horizonY * 0.88,
+                    r: 0.7 + Math.random() * 2,
+                    twinkle: Math.random() * Math.PI * 2
+                }));
+            }
             else if (nextMilestone === 200) msg = "Duck under the door frames!";
             else if (nextMilestone === 300) msg = "You are a moving star!";
             else if (nextMilestone === 400) msg = "You are a legend!";
@@ -2556,39 +2681,50 @@ window.addEventListener('DOMContentLoaded', () => {
     function drawBg() {
         bgCtx.clearRect(0, 0, W, H);
 
+        const isDark = document.documentElement.classList.contains('dark');
+
         const grad = bgCtx.createRadialGradient(W*0.35, H*0.45, 0, W*0.5, H*0.5, W*0.85);
-        grad.addColorStop(0,   '#e8f4ef');
-        grad.addColorStop(0.4, '#d4ede7');
-        grad.addColorStop(1,   '#c5e4dc');
+        if (isDark) {
+            grad.addColorStop(0,   '#0d1f1a');
+            grad.addColorStop(0.4, '#0f1e2a');
+            grad.addColorStop(1,   '#0a1628');
+        } else {
+            grad.addColorStop(0,   '#e8f4ef');
+            grad.addColorStop(0.4, '#d4ede7');
+            grad.addColorStop(1,   '#c5e4dc');
+        }
         bgCtx.fillStyle = grad;
         bgCtx.fillRect(0, 0, W, H);
 
+        const lineOpMul = isDark ? 3.5 : 2.5;
         lines.forEach(l => {
             bgCtx.beginPath();
             for (let x = 0; x <= W; x += 3) {
                 const y = l.y + Math.sin((x + l.x) * l.freq) * l.amp;
                 x === 0 ? bgCtx.moveTo(x, y) : bgCtx.lineTo(x, y);
             }
-            bgCtx.strokeStyle = l.col + (l.op * 2.5) + ')';
+            bgCtx.strokeStyle = l.col + (l.op * lineOpMul) + ')';
             bgCtx.lineWidth = 1.5;
             bgCtx.stroke();
             l.x += l.spd;
             if (l.x > W) l.x = 0;
         });
 
+        const partOpMul = isDark ? 3.5 : 2.5;
         particles.forEach(p => {
             bgCtx.beginPath();
             bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            bgCtx.fillStyle = p.col + (p.op * 2.5) + ')';
+            bgCtx.fillStyle = p.col + (p.op * partOpMul) + ')';
             bgCtx.fill();
             p.x += p.vx; p.y += p.vy;
             if (p.x > W) p.x = 0;
             if (p.y < 0)  p.y = H;
         });
 
-        drawBgKoru(W * 0.08, H * 0.18, 90,  'rgba(42,157,143,0.12)');
-        drawBgKoru(W * 0.92, H * 0.75, 70,  'rgba(192,57,43,0.1)');
-        drawBgKoru(W * 0.5,  H * 0.88, 55,  'rgba(244,162,97,0.1)');
+        const koruOp = isDark ? 0.18 : 0.12;
+        drawBgKoru(W * 0.08, H * 0.18, 90,  `rgba(42,157,143,${koruOp})`);
+        drawBgKoru(W * 0.92, H * 0.75, 70,  `rgba(192,57,43,${isDark ? 0.15 : 0.1})`);
+        drawBgKoru(W * 0.5,  H * 0.88, 55,  `rgba(244,162,97,${isDark ? 0.15 : 0.1})`);
 
         t++;
         requestAnimationFrame(drawBg);
@@ -2597,6 +2733,83 @@ window.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', resize);
     resize();
     drawBg();
+})();
+</script>
+
+<!-- ── FIREWORKS OVERLAY (streak screen celebration) ── -->
+<canvas id="fireworks-canvas" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:200;display:none;"></canvas>
+<script>
+(function () {
+    const fw = document.getElementById('fireworks-canvas');
+    const fctx = fw.getContext('2d');
+    let fwParticles = [], fwAnimId = null, fwActive = false;
+
+    function resize() { fw.width = window.innerWidth; fw.height = window.innerHeight; }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function burst(cx, cy) {
+        const palette = ['#f59e0b','#ef4444','#10b981','#3b82f6','#8b5cf6','#ec4899','#fbbf24','#34d399'];
+        for (let i = 0; i < 28; i++) {
+            const angle = (i / 28) * Math.PI * 2 + Math.random() * 0.3;
+            const spd   = 2.5 + Math.random() * 5;
+            fwParticles.push({
+                x: cx, y: cy,
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd - 1,
+                color: palette[Math.floor(Math.random() * palette.length)],
+                r: 3 + Math.random() * 3,
+                life: 1.0,
+                decay: 0.012 + Math.random() * 0.01
+            });
+        }
+    }
+
+    function scheduleBursts() {
+        // Fire exactly 3 bursts at staggered times
+        [0, 550, 1100].forEach(d => setTimeout(() => {
+            burst(fw.width * (0.2 + Math.random() * 0.6), fw.height * (0.1 + Math.random() * 0.5));
+        }, d));
+        // Stop the active flag after the last burst fires so particles fade on their own
+        setTimeout(() => { fwActive = false; }, 1150);
+    }
+
+    function drawFw() {
+        fctx.clearRect(0, 0, fw.width, fw.height);
+        fwParticles = fwParticles.filter(p => p.life > 0);
+        fwParticles.forEach(p => {
+            fctx.save();
+            fctx.globalAlpha = p.life;
+            fctx.beginPath();
+            fctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+            fctx.fillStyle = p.color;
+            fctx.shadowColor = p.color;
+            fctx.shadowBlur = 6;
+            fctx.fill();
+            fctx.restore();
+            p.x  += p.vx;
+            p.y  += p.vy;
+            p.vy += 0.09;   // gravity
+            p.vx *= 0.98;   // air drag
+            p.life -= p.decay;
+        });
+        if (fwActive || fwParticles.length > 0) fwAnimId = requestAnimationFrame(drawFw);
+        else { fctx.clearRect(0, 0, fw.width, fw.height); fw.style.display = 'none'; }
+    }
+
+    window.startFireworks = function () {
+        fwActive = true;
+        fwParticles = [];
+        fw.style.display = 'block';
+        cancelAnimationFrame(fwAnimId);
+        scheduleBursts();
+        drawFw();
+    };
+
+    window.stopFireworks = function () {
+        fwActive = false;
+        // particles fade out naturally; canvas hides itself when empty
+    };
 })();
 </script>
 
