@@ -22,7 +22,24 @@
     </script>
     
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background-color 0.3s; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        /* Animated background — visible during all non-gameplay states */
+        #bg-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* Teal card border matching login.html style */
+        .card-teal {
+            border: 2px solid rgba(42,157,143,0.45) !important;
+            box-shadow: 0 0 0 1px rgba(42,157,143,0.10) inset,
+                        0 32px 80px rgba(42,157,143,0.12),
+                        0 0 80px rgba(42,157,143,0.08) !important;
+        }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
         #game-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
         #webcam-video { display: none !important; }
@@ -122,53 +139,23 @@
         }
         #streak-bonus-banner { animation: slideDown 4s ease forwards; }
 
-        /* Splash screen — before login */
-        #splash-screen {
-            position: absolute;
-            inset: 0;
-            z-index: 40;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            padding-bottom: clamp(3rem, 12vh, 6rem);
-            gap: 0;
-            pointer-events: auto;
-            background-color: #e8f6f4;
-            background-image: url('background.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+        /* Koru draw animation (under theme button) */
+        .login-koru-btn path {
+            stroke: #3dbdad;
+            stroke-width: 3.5;
+            fill: none;
+            stroke-linecap: round;
+            stroke-dasharray: 220;
+            stroke-dashoffset: 220;
+            animation: drawKoruL 2.2s cubic-bezier(.4,0,.2,1) 0.8s forwards;
         }
-        .dark #splash-screen {
-            background-color: #0f172a;
-            background-image: url('background.png');
+        .login-koru-btn .stem {
+            stroke-dasharray: 40;
+            stroke-dashoffset: 40;
+            animation: drawKoruL 0.6s ease 2.9s forwards;
         }
-        .splash-loading-block {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1.5rem;
-        }
-        .splash-spinner {
-            width: 5.5rem;
-            height: 5.5rem;
-            border: 6px solid rgba(0, 0, 0, 0.15);
-            border-top-color: #000000;
-            border-radius: 50%;
-            animation: splashSpin 0.85s linear infinite;
-        }
-        .splash-loading-text {
-            font-size: clamp(1.5rem, 4vw, 2rem);
-            font-weight: 700;
-            color: #000000;
-            letter-spacing: 0.06em;
-            margin: 0;
-        }
-        @keyframes splashSpin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes drawKoruL { to { stroke-dashoffset: 0; } }
 
         /* Login screen — Kia Kaha onboarding */
         #login-screen-wrap {
@@ -181,34 +168,54 @@
             padding: 1.25rem;
             overflow-y: auto;
             pointer-events: auto;
-            background-color: #e8f6f4;
-            background-image: url('background.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
+            background: transparent;
         }
         .dark #login-screen-wrap {
-            background-color: #0f172a;
-            background-image: url('background.png');
+            background: transparent;
         }
         #login-screen {
             width: 100%;
             max-width: 40rem;
-            background: #ffffff;
-            border: 4px solid rgba(99, 102, 241, 0.4);
-            border-radius: 1.5rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(24px) saturate(1.4);
+            -webkit-backdrop-filter: blur(24px) saturate(1.4);
+            border: 1.5px solid rgba(42,157,143,0.3);
+            border-radius: 2rem;
+            box-shadow: 0 0 0 1px rgba(42,157,143,0.12) inset,
+                        0 32px 80px rgba(42,157,143,0.1),
+                        0 0 80px rgba(42,157,143,0.08);
             padding: 2.25rem 2.25rem 2rem;
             text-align: left;
-            border: none;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 1.25rem;
         }
         .dark #login-screen {
-            background: rgba(17, 24, 39, 0.95);
-            border-color: rgba(99, 102, 241, 0.45);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+            background: rgba(10, 30, 20, 0.92);
+            backdrop-filter: blur(24px) saturate(1.4);
+            -webkit-backdrop-filter: blur(24px) saturate(1.4);
+            border-color: rgba(42,157,143,0.45);
+            box-shadow: 0 0 0 1px rgba(42,157,143,0.18) inset,
+                        0 32px 80px rgba(42,157,143,0.12),
+                        0 0 80px rgba(0,0,0,0.3);
         }
+        /* Background intro overlay */
+        #bg-intro {
+            position: fixed; inset: 0; z-index: 100;
+            background: url('background.png') center/cover no-repeat;
+            transition: opacity 0.9s ease, visibility 0.9s ease;
+        }
+        #bg-intro.out { opacity: 0; visibility: hidden; pointer-events: none; }
+
+        /* Login card entrance animation (matches login.html) */
+        #login-screen {
+            animation: loginCardIn 1.4s cubic-bezier(.16,.8,.3,1) 2s both;
+        }
+        @keyframes loginCardIn {
+            0%   { opacity: 0; transform: translateY(44px) scale(0.95); }
+            60%  { opacity: 1; }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
         .login-ui { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .login-teal { color: #26a69a; }
         .dark .login-teal { color: #2dd4bf; }
@@ -274,7 +281,9 @@
         #login-name-check.is-visible { opacity: 1; }
     </style>
 </head>
-<body class="bg-slate-100 dark:bg-[#1a202c] text-gray-900 dark:text-white">
+<body class="text-gray-900 dark:text-white">
+
+<canvas id="bg-canvas"></canvas>
 
 <div id="game-container">
     <!-- Hidden source video (used by MediaPipe) -->
@@ -379,21 +388,19 @@
             </div>
         </div>
 
-        <!-- Splash (before login) -->
-        <div id="splash-screen" class="login-ui" aria-busy="true">
-            <div class="splash-loading-block" role="status" aria-label="Loading">
-                <div class="splash-spinner" aria-hidden="true"></div>
-                <p class="splash-loading-text">Loading....</p>
-            </div>
-        </div>
-
         <!-- Login (full-screen Kia Kaha onboarding) -->
         <div id="login-screen-wrap" class="login-ui">
             <div id="login-screen">
-                <header class="relative mb-6">
-                    <div class="flex items-start justify-between gap-3 mb-4">
-                        <p id="txt-login-brand" class="login-brand login-teal">ACTIVE RUNNER</p>
-                        <div class="flex items-center gap-3 shrink-0">
+                <header class="relative mb-5">
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <div>
+                            <p class="login-teal" style="font-size:clamp(2.5rem,6vw,3.25rem);font-weight:900;line-height:1.15;letter-spacing:0.04em;text-transform:uppercase;">ACTIVE RUNNER</p>
+                            <h1 class="login-title mb-0">
+                                <span id="txt-login-kia" class="text-gray-900 dark:text-white">Kia</span>
+                                <span id="txt-login-kaha" class="login-coral"> Kaha</span>
+                            </h1>
+                        </div>
+                        <div class="flex flex-col items-end gap-2 shrink-0">
                             <button type="button" id="login-theme-toggle" class="w-[3.25rem] h-[3.25rem] rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm transition transform hover:scale-105 active:scale-95" aria-label="Toggle theme" title="Theme">
                                 <svg id="login-theme-icon-light" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true">
                                     <circle cx="12" cy="12" r="4"></circle>
@@ -403,20 +410,13 @@
                                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                                 </svg>
                             </button>
+                            <svg class="login-koru-btn w-[73px] h-[73px] opacity-60" viewBox="0 0 52 52" aria-hidden="true">
+                                <path class="stem" d="M26 46 L26 52"/>
+                                <path d="M26 46 C26 46 26 36 26 30 C26 18 16 10 10 14 C4 18 3 26 7 32 C11 38 18 40 23 37 C28 34 30 28 27 23 C24 18 18 17 15 21 C12 25 13 31 17 33 C21 35 25 33 26 29"/>
+                            </svg>
                         </div>
                     </div>
-                    <h1 class="login-title mb-2">
-                        <span id="txt-login-kia" class="text-gray-900 dark:text-white">Kia</span>
-                        <span id="txt-login-kaha" class="login-coral"> Kaha</span>
-                    </h1>
-                    <p id="txt-login-subtitle" class="login-subtitle login-teal mb-5">To Care for Our Elders</p>
-                    <div class="flex gap-4 items-stretch mb-6">
-                        <div class="w-1.5 rounded-full bg-[#ff8a65] shrink-0" aria-hidden="true"></div>
-                        <div>
-                            <p id="txt-login-quote1" class="login-quote1 text-gray-700 dark:text-gray-200">"Be strong, be brave, be steadfast"</p>
-                            <p id="txt-login-quote2" class="login-quote2 text-gray-600 dark:text-gray-300 mt-2">Move well, live well, stand tall.</p>
-                        </div>
-                    </div>
+                    <p id="txt-login-subtitle" class="login-subtitle login-teal mb-5">To Care for Kaumātua</p>
                     <hr class="border-gray-200 dark:border-gray-600" />
                 </header>
 
@@ -458,7 +458,7 @@
         <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto z-20" id="center-screens">
 
             <!-- DAILY STREAK SCREEN -->
-            <div id="streak-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-indigo-500/40 text-center max-w-xl w-[90%] shadow-2xl backdrop-blur-md hidden">
+            <div id="streak-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl card-teal text-center max-w-xl w-[90%] backdrop-blur-md hidden">
                 <!-- Title -->
                 <div class="flex items-center justify-center gap-3 mb-2">
                     <span class="text-4xl">🔥</span>
@@ -474,22 +474,22 @@
                 <!-- Day dots -->
                 <div class="flex justify-center gap-8 mb-6">
                     <div class="flex flex-col items-center gap-2">
-                        <div id="dot-2ago" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400">○</div>
+                        <div id="dot-2ago" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400"></div>
                         <span class="text-sm font-bold text-gray-500">2 days ago</span>
                     </div>
                     <div class="flex flex-col items-center gap-2">
-                        <div id="dot-yesterday" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400">○</div>
+                        <div id="dot-yesterday" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400"></div>
                         <span class="text-sm font-bold text-gray-500">Yesterday</span>
                     </div>
                     <div class="flex flex-col items-center gap-2">
-                        <div id="dot-today" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-green-500 bg-green-500/20 text-white">✓</div>
+                        <div id="dot-today" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-green-500 bg-green-500/20 text-green-600">✓</div>
                         <span class="text-sm font-bold text-gray-500">Today</span>
                     </div>
                 </div>
 
                 <!-- Warning -->
                 <div class="bg-indigo-50 border-2 border-indigo-400 rounded-2xl px-6 py-4 mb-6">
-                    <p class="text-indigo-700 font-black text-xl">⚠️ Miss a day and your streak resets to 0!</p>
+                    <p class="text-indigo-700 font-black text-xl">Miss a day and your streak resets to 0!</p>
                 </div>
 
                 <!-- Next button -->
@@ -499,14 +499,14 @@
             </div>
 
             <!-- DASHBOARD SCREEN -->
-            <div id="dashboard-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-indigo-500/40 text-center max-w-xl w-[95%] shadow-2xl backdrop-blur-md hidden mt-4 mb-4">
+            <div id="dashboard-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl card-teal text-center max-w-xl w-[95%] backdrop-blur-md hidden mt-4 mb-4">
                 <h1 id="txt-hello" class="text-4xl md:text-5xl font-black mb-8 text-gray-900 dark:text-white">Hello, </h1>
                 
                 <div class="flex flex-col gap-4">
                     <!-- 1P / 2P toggle -->
                     <div class="flex gap-3">
                         <button id="btn-mode-1p" class="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl border-4 border-indigo-400 transform transition hover:scale-105 active:scale-95 text-2xl">👤 1 Player</button>
-                        <button id="btn-mode-2p" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-black py-4 rounded-2xl border-4 border-transparent transform transition hover:scale-105 active:scale-95 text-2xl">👥 2 Player</button>
+                        <button id="btn-mode-2p" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-black py-4 rounded-2xl border-4 border-transparent transform transition hover:scale-105 active:scale-95 text-2xl">⚔️ 2 Player</button>
                     </div>
 
                     <!-- P2 name input shown in 2P mode -->
@@ -532,7 +532,7 @@
             </div>
 
             <!-- Loading AI -->
-            <div id="loading-screen" class="bg-white/95 dark:bg-gray-900/90 p-8 rounded-3xl border-4 border-gray-300 dark:border-gray-700 text-center max-w-md w-[90%] backdrop-blur-md hidden shadow-2xl">
+            <div id="loading-screen" class="bg-white/95 dark:bg-gray-900/90 p-8 rounded-3xl card-teal text-center max-w-md w-[90%] backdrop-blur-md hidden">
                 <div class="animate-spin inline-block w-16 h-16 border-[6px] border-current border-t-transparent text-indigo-600 dark:text-indigo-500 rounded-full mb-6"></div>
                 <h1 class="text-4xl font-black mb-4 bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400 bg-clip-text text-transparent">Active Runner</h1>
                 <p id="txt-loading-ai" class="text-2xl text-gray-700 dark:text-gray-300 font-bold">Loading AI Engine...</p>
@@ -540,7 +540,7 @@
             </div>
 
             <!-- Warning screen -->
-            <div id="warning-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 md:p-10 rounded-3xl border-4 border-amber-500/60 text-left max-w-2xl w-[90%] backdrop-blur-md hidden shadow-2xl">
+            <div id="warning-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 md:p-10 rounded-3xl card-teal text-left max-w-2xl w-[90%] backdrop-blur-md hidden">
                 <h2 id="txt-warning-title" class="text-4xl md:text-5xl font-black text-amber-600 dark:text-amber-400 mb-6 border-b-2 border-amber-200 dark:border-amber-900 pb-2">Safety Warning</h2>
                 <p id="txt-warning-1" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-6">
                     Please play in a clear, dry, non-slip area with enough room to move both arms.
@@ -555,13 +555,10 @@
             </div>
 
             <!-- How to play (5 steps) -->
-            <div id="instructions-screen" class="hidden fixed inset-0 z-40 flex flex-col bg-slate-100/95 dark:bg-[#1a202c]/95 backdrop-blur-md text-gray-900 dark:text-white pointer-events-auto p-4 md:p-6 min-h-0">
-                <div class="w-full max-w-5xl mx-auto flex flex-col flex-1 min-h-0 bg-white/95 dark:bg-gray-900/95 rounded-3xl border-4 border-indigo-500/40 shadow-2xl backdrop-blur-md overflow-hidden">
-                <header class="text-center pt-6 md:pt-8 pb-4 px-6 pr-28 md:pr-36 shrink-0 border-b-2 border-gray-200 dark:border-gray-700 relative">
+            <div id="instructions-screen" class="hidden fixed inset-0 z-40 flex flex-col bg-[#e8f4ef]/90 dark:bg-[#0a1f14]/90 backdrop-blur-md text-gray-900 dark:text-white pointer-events-auto p-4 md:p-6 min-h-0">
+                <div class="w-full max-w-5xl mx-auto flex flex-col flex-1 min-h-0 bg-white/95 dark:bg-gray-900/95 rounded-3xl card-teal backdrop-blur-md overflow-hidden">
+                <header class="text-center pt-6 md:pt-8 pb-4 px-6 pr-16 md:pr-20 shrink-0 border-b-2 border-gray-200 dark:border-gray-700 relative">
                     <div class="instruction-header-actions absolute top-4 right-4 md:top-6 md:right-6 z-10 flex flex-col items-end gap-1.5">
-                        <button type="button" id="instruction-skip" class="bg-indigo-600 hover:bg-indigo-500 text-white py-3 px-4 md:py-3 md:px-5 text-base md:text-lg whitespace-nowrap">
-                            Skip tutorial
-                        </button>
                         <button type="button" id="instruction-mute" class="flex items-center justify-center" aria-label="Mute voice" aria-pressed="false">
                             <svg id="instruction-mute-icon-on" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -589,18 +586,21 @@
                         </div>
                     </button>
                 </div>
-                <footer class="shrink-0 px-4 md:px-6 pb-6 pt-2">
+                <footer class="shrink-0 px-4 md:px-6 pb-6 pt-2 flex flex-col gap-3">
                     <div class="flex items-center justify-between gap-4 bg-gray-50 dark:bg-gray-800 rounded-2xl px-4 py-4 border-2 border-gray-200 dark:border-gray-700">
                         <button type="button" id="instruction-prev" class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-2xl font-black shadow-lg transition disabled:opacity-30 disabled:pointer-events-none" aria-label="Previous">←</button>
                         <p class="text-xl md:text-2xl font-black tabular-nums text-gray-800 dark:text-gray-200"><span id="instruction-page-current" class="inline-block min-w-[2ch] text-center px-3 py-1 rounded-full bg-indigo-600 text-white">1</span> / <span id="instruction-page-total">5</span></p>
                         <button type="button" id="instruction-next" class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-2xl font-black shadow-lg transition" aria-label="Next">→</button>
                     </div>
+                    <button type="button" id="instruction-skip" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 px-5 rounded-2xl text-base md:text-lg font-black shadow-lg transition hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap">
+                        Skip tutorial
+                    </button>
                 </footer>
                 </div>
             </div>
 
             <!-- Start / Calibrate -->
-            <div id="start-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl border-4 border-green-500/50 text-center max-w-lg w-[90%] backdrop-blur-md hidden shadow-2xl">
+            <div id="start-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl card-teal text-center max-w-lg w-[90%] backdrop-blur-md hidden">
                 <h1 id="txt-ready" class="text-5xl font-black mb-6 text-gray-900 dark:text-white">Ready to move?</h1>
                 <p id="txt-ready-sub" class="text-2xl text-gray-700 dark:text-gray-300 mb-6 font-semibold">Step back so your upper body is visible. Stand still in the center to calibrate.</p>
 
@@ -616,7 +616,7 @@
             </div>
 
             <!-- Calibration Progress -->
-            <div id="calibration-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl border-4 border-yellow-500/50 text-center max-w-lg w-[90%] backdrop-blur-md hidden shadow-2xl">
+            <div id="calibration-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl card-teal text-center max-w-lg w-[90%] backdrop-blur-md hidden">
                 <h2 id="txt-stand-still" class="text-4xl font-black mb-6 text-yellow-600 dark:text-yellow-400">Stand Still...</h2>
                 <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-8 mb-6 border-2 border-gray-300 dark:border-gray-600">
                     <div id="calibration-bar" class="bg-yellow-400 h-full rounded-full transition-all duration-100" style="width: 0%"></div>
@@ -625,44 +625,51 @@
             </div>
 
             <!-- Game Over -->
-            <div id="game-over-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-green-500/60 text-center max-w-2xl w-[90%] backdrop-blur-md hidden shadow-[0_0_50px_rgba(34,197,94,0.3)]" style="max-height:90vh;overflow-y:auto;">
-                <h1 id="txt-game-over" class="text-5xl font-black mb-2 text-green-600 dark:text-green-400">Great Job!</h1>
+            <div id="game-over-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl card-teal text-center max-w-2xl w-[90%] backdrop-blur-md hidden" style="max-height:90vh;overflow-y:auto;">
+                <h1 id="txt-game-over" class="text-4xl font-black mb-2 text-green-600 dark:text-green-400">Great Job!</h1>
 
                 <!-- Winner banner — 2P mode only -->
                 <div id="winner-banner" class="hidden mb-4 bg-yellow-400 rounded-2xl py-3 px-6">
-                    <p class="text-3xl font-black text-gray-900">🏆 <span id="winner-name"></span> wins! — <span id="winner-score" class="text-indigo-700"></span> pts</p>
+                    <p class="text-2xl font-black text-gray-900">🏆 <span id="winner-name"></span> wins! — <span id="winner-score" class="text-indigo-700"></span> pts</p>
                 </div>
 
                 <!-- Score row — single player only -->
-                <div id="score-row" class="flex justify-around gap-4 mb-4">
-                    <div class="flex-1 bg-blue-50 dark:bg-blue-900/40 p-4 rounded-2xl border border-blue-300 dark:border-blue-700">
-                        <p class="text-blue-800 dark:text-blue-300 font-black text-xl uppercase mb-1" id="final-p1-name">Player 1</p>
-                        <p class="text-gray-500 dark:text-gray-400 text-sm">SCORE</p>
-                        <p class="text-4xl font-black text-indigo-600 dark:text-indigo-400" id="final-score">0</p>
+                <div id="score-row" class="mb-4">
+                    <div class="bg-blue-50 dark:bg-blue-900/40 px-6 py-5 rounded-2xl border border-blue-300 dark:border-blue-700 flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-gray-500 dark:text-gray-400 text-2xl uppercase font-bold tracking-widest mb-1">Player</p>
+                            <p class="text-3xl font-black text-blue-800 dark:text-blue-200 leading-tight" id="final-p1-name">Player 1</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-gray-500 dark:text-gray-400 text-2xl uppercase font-bold tracking-widest mb-1">Score</p>
+                            <p class="text-6xl font-black text-indigo-600 dark:text-indigo-400 leading-none" id="final-score">0</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Stats row -->
                 <div class="flex flex-col sm:flex-row justify-around gap-4 mb-6">
                     <div class="flex-1 bg-blue-50 dark:bg-blue-900/40 p-5 rounded-2xl border border-blue-300 dark:border-blue-700">
-                        <p class="text-blue-800 dark:text-blue-300 font-black text-lg uppercase mb-2" id="final-p1-stats-name">Player 1</p>
-                        <div class="flex justify-between text-lg font-bold">
-                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">SQUATS</span> <span id="final-p1-squats" class="text-3xl">0</span></div>
-                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">JUMPS</span> <span id="final-p1-jumps" class="text-3xl">0</span></div>
+                        <p class="text-blue-800 dark:text-blue-300 font-black text-sm uppercase mb-2" id="final-p1-stats-name">Player 1</p>
+                        <div class="flex justify-between text-base font-bold">
+                            <div><span class="text-gray-500 dark:text-gray-400 text-2xl block">SQUATS</span> <span id="final-p1-squats" class="text-2xl">0</span></div>
+                            <div class="text-center"><span class="text-gray-500 dark:text-gray-400 text-2xl block">ENERGY</span> <span id="final-p1-energy" class="text-2xl text-orange-600 dark:text-yellow-400 font-black">0.0</span><span class="text-2xl text-gray-400 ml-0.5">kcal</span></div>
+                            <div><span class="text-gray-500 dark:text-gray-400 text-2xl block">JUMPS</span> <span id="final-p1-jumps" class="text-2xl">0</span></div>
                         </div>
                     </div>
                     <div id="final-p2-container" class="hidden flex-1 bg-red-50 dark:bg-red-900/40 p-5 rounded-2xl border border-red-300 dark:border-red-700">
-                        <p class="text-red-800 dark:text-red-300 font-black text-lg uppercase mb-2" id="final-p2-stats-name">Player 2</p>
-                        <div class="flex justify-between text-lg font-bold">
-                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">SQUATS</span> <span id="final-p2-squats" class="text-3xl">0</span></div>
-                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">JUMPS</span> <span id="final-p2-jumps" class="text-3xl">0</span></div>
+                        <p class="text-red-800 dark:text-red-300 font-black text-sm uppercase mb-2" id="final-p2-stats-name">Player 2</p>
+                        <div class="flex justify-between text-base font-bold">
+                            <div><span class="text-gray-500 dark:text-gray-400 text-2xl block">SQUATS</span> <span id="final-p2-squats" class="text-2xl">0</span></div>
+                            <div class="text-center"><span class="text-gray-500 dark:text-gray-400 text-2xl block">ENERGY</span> <span id="final-p2-energy" class="text-2xl text-orange-600 dark:text-yellow-400 font-black">0.0</span><span class="text-2xl text-gray-400 ml-0.5">kcal</span></div>
+                            <div><span class="text-gray-500 dark:text-gray-400 text-2xl block">JUMPS</span> <span id="final-p2-jumps" class="text-2xl">0</span></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Leaderboard inside game over — hidden by default -->
                 <div id="gameover-lb-wrap" class="hidden bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 border-2 border-gray-200 dark:border-gray-700 mb-6 text-left">
-                    <h2 class="text-3xl font-black mb-3 text-gray-800 dark:text-gray-200 border-b-2 border-gray-300 dark:border-gray-600 pb-2">🏆 Top Players</h2>
+                    <h2 class="text-2xl font-black mb-3 text-gray-800 dark:text-gray-200 border-b-2 border-gray-300 dark:border-gray-600 pb-2">🏆 Top Players</h2>
                     <!-- Normal / Chill tabs -->
                     <div class="flex gap-2 mb-4">
                         <button id="go-lb-tab-normal" onclick="switchGOLBTab('normal')" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-xl border-2 border-green-400 text-lg">Normal</button>
@@ -684,10 +691,10 @@
 
                 <!-- Two buttons side by side -->
                 <div class="flex gap-4">
-                    <button id="restart-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl">
+                    <button id="restart-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 px-6 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-xl">
                         Return to Dashboard
                     </button>
-                    <button id="btn-gameover-lb" onclick="toggleGameoverLB()" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl">
+                    <button id="btn-gameover-lb" onclick="toggleLeaderboard()" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-black py-4 px-6 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-xl">
                         🏆 Leaderboard
                     </button>
                 </div>
@@ -695,8 +702,8 @@
                 <!-- Health Tip -->
                 <div id="health-tip-card" class="mt-6 text-left bg-emerald-50 dark:bg-emerald-950/50 border-2 border-emerald-200 dark:border-emerald-800 rounded-2xl p-5 shadow-inner">
                     <p id="txt-health-tip-label" class="text-xs uppercase tracking-widest text-emerald-700 dark:text-emerald-400 font-black mb-2">Health tip</p>
-                    <h3 id="health-tip-title" class="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight"></h3>
-                    <p id="health-tip-body" class="text-lg md:text-xl text-gray-700 dark:text-gray-300 font-medium leading-relaxed"></p>
+                    <h3 id="health-tip-title" class="text-[1.625rem] md:text-[1.95rem] font-black text-gray-900 dark:text-white mb-2 leading-tight"></h3>
+                    <p id="health-tip-body" class="text-[1.3rem] text-gray-700 dark:text-gray-300 font-bold leading-relaxed"></p>
                     <p id="txt-health-tip-source" class="mt-4 text-sm md:text-base text-emerald-800/75 dark:text-emerald-300/80 font-semibold text-right">Source: NZ Ministry of Health</p>
                 </div>
 
@@ -728,9 +735,12 @@
     </div>
 </div>
 
+<!-- Background intro overlay -->
+<div id="bg-intro"></div>
+
 <!-- ===== LEADERBOARD MODAL ===== -->
 <div id="lb-modal" class="fixed inset-0 z-[100] items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-auto" style="display:none;">
-    <div class="bg-white dark:bg-gray-900 rounded-3xl border-4 border-indigo-400 shadow-2xl w-[90%] max-w-lg p-8">
+    <div class="bg-white/95 dark:bg-gray-900/95 rounded-3xl card-teal backdrop-blur-md w-[90%] max-w-lg p-8">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-3xl font-black text-gray-800 dark:text-gray-200">🏆 Top Players</h2>
             <button onclick="toggleLeaderboard()" class="text-gray-400 hover:text-gray-800 dark:hover:text-white text-3xl font-black leading-none w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition">✕</button>
@@ -766,7 +776,7 @@ let numPlayers = 1;
 const translations = {
     en: {
         themeDark: "Dark Theme", themeLight: "Light Theme",
-        loginBrand: "ACTIVE RUNNER", loginSubtitle: "To Care for Our Elders",
+        loginBrand: "ACTIVE RUNNER", loginSubtitle: "To Care for Kaumātua",
         loginQuote1: "\"Be strong, be brave, be steadfast\"",
         loginQuote2: "Move well, live well, stand tall.",
         loginNameLabel: "YOUR NAME", loginLangLabel: "LANGUAGE",
@@ -840,7 +850,7 @@ const translations = {
 
 const elementsToTranslate = {
     'txt-theme-dark': 'themeDark', 'txt-theme-light': 'themeLight',
-    'txt-login-brand': 'loginBrand', 'txt-login-subtitle': 'loginSubtitle',
+    'txt-login-subtitle': 'loginSubtitle',
     'txt-login-quote1': 'loginQuote1', 'txt-login-quote2': 'loginQuote2',
     'txt-login-name-label': 'loginNameLabel', 'txt-login-lang-label': 'loginLangLabel',
     'txt-welcome': 'welcome', 'txt-instruction': 'instruction',
@@ -1401,7 +1411,7 @@ function handlePlayerMovement(player, landmarks) {
         player.isResting = true;
         if (player.shieldOrbs > 0 && !player.shieldActive) {
             player.shieldActive = true;
-            player.shieldTimer  = 1800;
+            player.shieldTimer  = 300;
             player.shieldOrbs--;
             updateHUD();
             playSynth('shield');
@@ -1515,14 +1525,14 @@ document.getElementById('btn-continue').addEventListener('click', () => {
     const dot2 = document.getElementById('dot-2ago');
     const dotY = document.getElementById('dot-yesterday');
     if (streak >= 3) {
-        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-yellow-400 bg-yellow-400/20 text-white'; dot2.textContent = '✓';
-        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-yellow-400 bg-yellow-400/20 text-white'; dotY.textContent = '✓';
+        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-green-500 bg-green-500/20 text-green-600'; dot2.textContent = '✓';
+        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-green-500 bg-green-500/20 text-green-600'; dotY.textContent = '✓';
     } else if (streak >= 2) {
-        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dot2.textContent = '○';
-        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-yellow-400 bg-yellow-400/20 text-white'; dotY.textContent = '✓';
+        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dot2.textContent = '';
+        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-green-500 bg-green-500/20 text-green-600'; dotY.textContent = '✓';
     } else {
-        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dot2.textContent = '○';
-        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dotY.textContent = '○';
+        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dot2.textContent = '';
+        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dotY.textContent = '';
     }
 
     // Show streak screen
@@ -1688,7 +1698,7 @@ function drawBackground(canvasW) {
 
 function drawStaticBackground() {
     ctx.clearRect(0, 0, gameWidth, gameHeight);
-    drawBackground(gameWidth);
+    // bg-canvas provides the animated background during non-game states
 }
 
 // ---- ORB SPAWNING ----
@@ -1897,8 +1907,10 @@ function gameOver() {
         document.getElementById('final-p2-stats-name').innerText = currentPlayer2Name;
         document.getElementById('final-p1-squats').innerText = players[0].stats.squats;
         document.getElementById('final-p1-jumps').innerText = players[0].stats.jumps;
+        document.getElementById('final-p1-energy').textContent = ((score * 0.01) + (players[0].stats.squats * 0.5) + (players[0].stats.jumps * 0.8)).toFixed(1);
         document.getElementById('final-p2-squats').innerText = players[1].stats.squats;
         document.getElementById('final-p2-jumps').innerText = players[1].stats.jumps;
+        document.getElementById('final-p2-energy').textContent = ((score * 0.01) + (players[1].stats.squats * 0.5) + (players[1].stats.jumps * 0.8)).toFixed(1);
 
         // Winner = whoever still has lives (survivor wins)
         let winnerName, winnerScore;
@@ -1927,6 +1939,7 @@ function gameOver() {
         document.getElementById('final-score').innerText = Math.floor(score);
         document.getElementById('final-p1-squats').innerText = players[0].stats.squats;
         document.getElementById('final-p1-jumps').innerText = players[0].stats.jumps;
+        document.getElementById('final-p1-energy').textContent = ((score * 0.02) + (players[0].stats.squats * 0.5) + (players[0].stats.jumps * 0.8)).toFixed(1);
         document.getElementById('final-p2-container').classList.add('hidden');
         document.getElementById('winner-banner').classList.add('hidden');
     }
@@ -1967,7 +1980,7 @@ function drawShieldRing(p, subW) {
     const basePos  = getScreenPos(p.lane, 0.85, subW);
     const pulse    = 1 + Math.sin(frameCount * 0.15) * 0.08;
     const radius   = 80;
-    const progress = p.shieldTimer / 1800;   // countdown 1 → 0
+    const progress = p.shieldTimer / 300;   // countdown 1 → 0
     const secsLeft = Math.ceil(p.shieldTimer / 60);
 
     ctx.save();
@@ -2332,15 +2345,6 @@ function gameLoop() {
 /**
  * INITIALIZATION
  */
-const SPLASH_DURATION_MS = 2500;
-
-function dismissSplashScreen() {
-    const splash = document.getElementById('splash-screen');
-    if (!splash || splash.classList.contains('hidden')) return;
-    splash.classList.add('hidden');
-    splash.setAttribute('aria-busy', 'false');
-}
-
 window.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('game_theme') || 'light';
     document.getElementById('theme-select').value = savedTheme;
@@ -2352,10 +2356,111 @@ window.addEventListener('DOMContentLoaded', () => {
     if (savedName) document.getElementById('player-name').value = savedName;
     updateLoginNameCheck();
     const savedName2 = localStorage.getItem('player2_name');
-    if (savedName2) { currentPlayer2Name = savedName2; document.getElementById('player2-name').value = savedName2; }
+    if (savedName2) { currentPlayer2Name = savedName2; }
     drawStaticBackground();
-    setTimeout(dismissSplashScreen, SPLASH_DURATION_MS);
+    setTimeout(() => {
+        const intro = document.getElementById('bg-intro');
+        if (intro) intro.classList.add('out');
+    }, 2000);
 });
+</script>
+
+<!-- Animated background canvas — matches login.html loading screen -->
+<script>
+(function() {
+    const bgCanvas = document.getElementById('bg-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    let W, H, lines, particles;
+
+    function resize() {
+        W = bgCanvas.width  = window.innerWidth;
+        H = bgCanvas.height = window.innerHeight;
+        init();
+    }
+
+    function init() {
+        lines = Array.from({ length: 18 }, (_, i) => ({
+            y:   (H / 18) * i + Math.random() * 30,
+            x:   Math.random() * W,
+            amp: 10 + Math.random() * 22,
+            freq:0.004 + Math.random() * 0.006,
+            spd: 0.18 + Math.random() * 0.3,
+            col: ['rgba(42,157,143,', 'rgba(192,57,43,', 'rgba(244,162,97,'][i % 3],
+            op:  0.04 + Math.random() * 0.06
+        }));
+        particles = Array.from({ length: 55 }, () => ({
+            x:  Math.random() * W,
+            y:  Math.random() * H,
+            r:  0.5 + Math.random() * 1.5,
+            vx: 0.3 + Math.random() * 0.8,
+            vy: -0.1 - Math.random() * 0.3,
+            op: 0.1 + Math.random() * 0.25,
+            col:['rgba(42,157,143,', 'rgba(212,168,67,', 'rgba(241,250,238,'][Math.floor(Math.random()*3)]
+        }));
+    }
+
+    let t = 0;
+    function drawBgKoru(cx, cy, scale, color) {
+        bgCtx.save();
+        bgCtx.translate(cx, cy);
+        bgCtx.rotate(t * 0.002);
+        bgCtx.beginPath();
+        for (let a = 0; a < Math.PI * 4; a += 0.05) {
+            const r = (a / (Math.PI * 4)) * scale;
+            const x = Math.cos(a) * r, y = Math.sin(a) * r;
+            a < 0.05 ? bgCtx.moveTo(x, y) : bgCtx.lineTo(x, y);
+        }
+        bgCtx.strokeStyle = color;
+        bgCtx.lineWidth = 3;
+        bgCtx.stroke();
+        bgCtx.restore();
+    }
+
+    function drawBg() {
+        bgCtx.clearRect(0, 0, W, H);
+
+        const grad = bgCtx.createRadialGradient(W*0.35, H*0.45, 0, W*0.5, H*0.5, W*0.85);
+        grad.addColorStop(0,   '#e8f4ef');
+        grad.addColorStop(0.4, '#d4ede7');
+        grad.addColorStop(1,   '#c5e4dc');
+        bgCtx.fillStyle = grad;
+        bgCtx.fillRect(0, 0, W, H);
+
+        lines.forEach(l => {
+            bgCtx.beginPath();
+            for (let x = 0; x <= W; x += 3) {
+                const y = l.y + Math.sin((x + l.x) * l.freq) * l.amp;
+                x === 0 ? bgCtx.moveTo(x, y) : bgCtx.lineTo(x, y);
+            }
+            bgCtx.strokeStyle = l.col + (l.op * 2.5) + ')';
+            bgCtx.lineWidth = 1.5;
+            bgCtx.stroke();
+            l.x += l.spd;
+            if (l.x > W) l.x = 0;
+        });
+
+        particles.forEach(p => {
+            bgCtx.beginPath();
+            bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            bgCtx.fillStyle = p.col + (p.op * 2.5) + ')';
+            bgCtx.fill();
+            p.x += p.vx; p.y += p.vy;
+            if (p.x > W) p.x = 0;
+            if (p.y < 0)  p.y = H;
+        });
+
+        drawBgKoru(W * 0.08, H * 0.18, 90,  'rgba(42,157,143,0.12)');
+        drawBgKoru(W * 0.92, H * 0.75, 70,  'rgba(192,57,43,0.1)');
+        drawBgKoru(W * 0.5,  H * 0.88, 55,  'rgba(244,162,97,0.1)');
+
+        t++;
+        requestAnimationFrame(drawBg);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    drawBg();
+})();
 </script>
 
 </body>
