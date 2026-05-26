@@ -216,6 +216,42 @@
             100% { opacity: 1; transform: translateY(0) scale(1); }
         }
 
+        /* Winner stamp */
+        .winner-stamp {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-14deg) scale(0);
+            width: 160px; height: 60px;
+            border: 6px solid rgba(234,179,8,0.88);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none; opacity: 0;
+            box-shadow: 0 0 0 3px rgba(234,179,8,0.18) inset;
+            z-index: 10;
+        }
+        .winner-stamp.show {
+            animation: stampThud 0.5s cubic-bezier(.36,.07,.19,.97) 0.55s both;
+        }
+        .winner-stamp-text {
+            font-size: 1.45rem; font-weight: 900;
+            color: rgba(234,179,8,0.9);
+            text-transform: uppercase; letter-spacing: 0.12em;
+            text-align: center; line-height: 1.15;
+        }
+        @keyframes stampThud {
+            0%   { transform: translate(-50%,-50%) rotate(-14deg) scale(2.8); opacity: 0; }
+            55%  { transform: translate(-50%,-50%) rotate(-14deg) scale(0.88); opacity: 1; }
+            75%  { transform: translate(-50%,-50%) rotate(-14deg) scale(1.06); opacity: 1; }
+            100% { transform: translate(-50%,-50%) rotate(-14deg) scale(1);    opacity: 1; }
+        }
+
+        /* 2P mode game over: hide energy, larger names, smaller grey labels */
+        #game-over-screen.mode-2p #final-p1-energy-col,
+        #game-over-screen.mode-2p #final-p2-energy-col { display: none !important; }
+        #game-over-screen.mode-2p #final-p1-stats-name,
+        #game-over-screen.mode-2p #final-p2-stats-name { font-size: 2.2rem !important; margin-bottom: 0.5rem; }
+        #game-over-screen.mode-2p .go-stat-label { font-size: 1.1rem !important; }
+
         .login-ui { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .login-teal { color: #26a69a; }
         .dark .login-teal { color: #2dd4bf; }
@@ -289,7 +325,7 @@
     <!-- Hidden source video (used by MediaPipe) -->
     <video id="webcam-video" class="hidden" autoplay playsinline></video>
     <!-- Split camera: P1 left, P2 right — only shown in 2P mode during gameplay -->
-    <div id="split-cam-container" style="position:absolute;bottom:16px;left:0;width:100%;display:none;justify-content:space-between;pointer-events:none;z-index:20;">
+    <div id="split-cam-container" style="position:absolute;top:16px;left:0;width:100%;display:none;justify-content:space-between;pointer-events:none;z-index:20;">
         <canvas id="cam-left"  width="220" height="165" style="position:static;width:220px;height:165px;border-radius:12px;border:3px solid rgba(239,68,68,0.7);opacity:0.85;margin-left:16px;"></canvas>
         <canvas id="cam-right" width="220" height="165" style="position:static;width:220px;height:165px;border-radius:12px;border:3px solid rgba(59,130,246,0.7);opacity:0.85;margin-right:16px;"></canvas>
     </div>
@@ -359,7 +395,7 @@
                     <p class="text-3xl font-black text-cyan-900 dark:text-white" id="p2-shields">0</p>
                 </div>
                 <div class="bg-rose-100/80 dark:bg-rose-700/60 rounded-lg p-3 text-right">
-                    <p class="text-rose-700 dark:text-rose-200 text-2xl font-black uppercase tracking-wide" id="p2-hud-name">Player 2</p>
+                    <p class="text-rose-700 dark:text-rose-200 text-[1.95rem] font-black uppercase tracking-wide" id="p2-hud-name">Player 2</p>
                     <p class="text-lg font-black text-rose-900 dark:text-white"><span id="p2-squats">0</span> Squats</p>
                     <p class="text-lg font-black text-rose-900 dark:text-white"><span id="p2-jumps">0</span> Jumps</p>
                     <p class="text-base font-bold text-orange-600 dark:text-yellow-400"><span id="p2-calories">0.0</span> kcal</p>
@@ -380,7 +416,7 @@
                     <p class="text-3xl font-black text-cyan-900 dark:text-white" id="p1-shields">0</p>
                 </div>
                 <div class="bg-indigo-100/80 dark:bg-indigo-700/60 rounded-lg p-3 text-right">
-                    <p class="text-indigo-700 dark:text-indigo-200 text-2xl font-black uppercase tracking-wide" id="p1-hud-name">Player 1</p>
+                    <p class="text-indigo-700 dark:text-indigo-200 text-[1.95rem] font-black uppercase tracking-wide" id="p1-hud-name">Player 1</p>
                     <p class="text-lg font-black text-indigo-900 dark:text-white"><span id="p1-squats">0</span> Squats</p>
                     <p class="text-lg font-black text-indigo-900 dark:text-white"><span id="p1-jumps">0</span> Jumps</p>
                     <p class="text-base font-bold text-orange-600 dark:text-yellow-400"><span id="p1-calories">0.0</span> kcal</p>
@@ -555,7 +591,7 @@
                 <p id="txt-warning-1" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-6">
                     Please play in a clear, dry, non-slip area with enough room to move both arms.
                 </p>
-                <ul class="text-gray-700 dark:text-amber-100/95 text-2xl font-semibold leading-relaxed space-y-4 mb-8 list-disc pl-6">
+                <ul class="text-gray-700 dark:text-amber-100/95 text-2xl font-semibold leading-relaxed space-y-4 mb-8 list-none pl-0">
                     <li id="txt-warning-2">Go at your own pace and hold nearby support if needed.</li>
                     <li id="txt-warning-3">Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.</li>
                 </ul>
@@ -647,11 +683,11 @@
                 <div id="score-row" class="mb-4">
                     <div class="bg-blue-50 dark:bg-blue-900/40 px-6 py-5 rounded-2xl border border-blue-300 dark:border-blue-700 flex items-center justify-between gap-4">
                         <div>
-                            <p class="text-gray-500 dark:text-gray-400 text-2xl uppercase font-bold tracking-widest mb-1">Player</p>
+                            <p class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl uppercase font-bold tracking-widest mb-1">Player</p>
                             <p class="text-3xl font-black text-blue-800 dark:text-blue-200 leading-tight" id="final-p1-name">Player 1</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-gray-500 dark:text-gray-400 text-2xl uppercase font-bold tracking-widest mb-1">Score</p>
+                            <p class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl uppercase font-bold tracking-widest mb-1">Score</p>
                             <p class="text-6xl font-black text-indigo-600 dark:text-indigo-400 leading-none" id="final-score">0</p>
                         </div>
                     </div>
@@ -659,20 +695,22 @@
 
                 <!-- Stats row -->
                 <div class="flex flex-col sm:flex-row justify-around gap-4 mb-6">
-                    <div class="flex-1 bg-blue-50 dark:bg-blue-900/40 p-5 rounded-2xl border border-blue-300 dark:border-blue-700">
+                    <div class="relative flex-1 bg-blue-50 dark:bg-blue-900/40 p-5 rounded-2xl border border-blue-300 dark:border-blue-700">
+                        <div class="winner-stamp" id="winner-stamp-p1"><span class="winner-stamp-text">WINNER</span></div>
                         <p class="text-blue-800 dark:text-blue-300 font-black text-sm uppercase mb-2" id="final-p1-stats-name">Player 1</p>
                         <div class="flex justify-between text-base font-bold">
-                            <div><span class="text-gray-500 dark:text-gray-400 text-2xl block">SQUATS</span> <span id="final-p1-squats" class="text-2xl">0</span></div>
-                            <div class="text-center"><span class="text-gray-500 dark:text-gray-400 text-2xl block">ENERGY</span> <span id="final-p1-energy" class="text-2xl text-orange-600 dark:text-yellow-400 font-black">0.0</span><span class="text-2xl text-gray-400 ml-0.5">kcal</span></div>
-                            <div><span class="text-gray-500 dark:text-gray-400 text-2xl block">JUMPS</span> <span id="final-p1-jumps" class="text-2xl">0</span></div>
+                            <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">SQUATS</span> <span id="final-p1-squats" class="text-2xl">0</span></div>
+                            <div id="final-p1-energy-col" class="text-center"><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">ENERGY</span> <span id="final-p1-energy" class="text-2xl text-orange-600 dark:text-yellow-400 font-black">0.0</span><span class="text-2xl text-gray-400 ml-0.5">kcal</span></div>
+                            <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">JUMPS</span> <span id="final-p1-jumps" class="text-2xl">0</span></div>
                         </div>
                     </div>
-                    <div id="final-p2-container" class="hidden flex-1 bg-red-50 dark:bg-red-900/40 p-5 rounded-2xl border border-red-300 dark:border-red-700">
+                    <div id="final-p2-container" class="relative hidden flex-1 bg-red-50 dark:bg-red-900/40 p-5 rounded-2xl border border-red-300 dark:border-red-700">
+                        <div class="winner-stamp" id="winner-stamp-p2"><span class="winner-stamp-text">WINNER</span></div>
                         <p class="text-red-800 dark:text-red-300 font-black text-sm uppercase mb-2" id="final-p2-stats-name">Player 2</p>
                         <div class="flex justify-between text-base font-bold">
-                            <div><span class="text-gray-500 dark:text-gray-400 text-2xl block">SQUATS</span> <span id="final-p2-squats" class="text-2xl">0</span></div>
-                            <div class="text-center"><span class="text-gray-500 dark:text-gray-400 text-2xl block">ENERGY</span> <span id="final-p2-energy" class="text-2xl text-orange-600 dark:text-yellow-400 font-black">0.0</span><span class="text-2xl text-gray-400 ml-0.5">kcal</span></div>
-                            <div><span class="text-gray-500 dark:text-gray-400 text-2xl block">JUMPS</span> <span id="final-p2-jumps" class="text-2xl">0</span></div>
+                            <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">SQUATS</span> <span id="final-p2-squats" class="text-2xl">0</span></div>
+                            <div id="final-p2-energy-col" class="text-center"><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">ENERGY</span> <span id="final-p2-energy" class="text-2xl text-orange-600 dark:text-yellow-400 font-black">0.0</span><span class="text-2xl text-gray-400 ml-0.5">kcal</span></div>
+                            <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">JUMPS</span> <span id="final-p2-jumps" class="text-2xl">0</span></div>
                         </div>
                     </div>
                 </div>
@@ -1325,7 +1363,7 @@ function showCameraForMode() {
 }
 
 function predictWebcam() {
-    if (gameState === 'playing' || gameState === 'calibrating') {
+    if (gameState === 'playing' || gameState === 'calibrating' || gameState === 'pre-calibrating') {
         let startTimeMs = performance.now();
         if (lastVideoTime !== videoElement.currentTime && poseLandmarker) {
             lastVideoTime = videoElement.currentTime;
@@ -1340,27 +1378,56 @@ function predictWebcam() {
 
 function onPoseResults(results) {
     if (!results.landmarks || results.landmarks.length === 0) return;
-    // Sort DESCENDING so poses[0] = left side of room (right side of raw video)
-    // lower X in raw video = right side of room = P2 (right board)
-    let poses = [...results.landmarks];
-    poses.sort((a, b) => b[0].x - a[0].x);  // highest X first = left side of room
+
+    // Hip midpoint is far more stable than nose for horizontal tracking
+    function getPoseX(pose) {
+        if (pose[23] && pose[24]) return (pose[23].x + pose[24].x) / 2;
+        return pose[0].x; // fallback to nose
+    }
+
+    // Sort descending: highest raw-X = left side of room = P1
+    let rawPoses = [...results.landmarks];
+    rawPoses.sort((a, b) => getPoseX(b) - getPoseX(a));
+
+    // In 2P with both poses visible + homeX established: Hungarian match to prevent swap flicker
+    let poses = rawPoses;
+    if (numPlayers === 2 && rawPoses.length >= 2 &&
+        players[0].homeX !== undefined && players[1].homeX !== undefined) {
+        const x0 = getPoseX(rawPoses[0]), x1 = getPoseX(rawPoses[1]);
+        const costNormal  = Math.abs(x0 - players[0].homeX) + Math.abs(x1 - players[1].homeX);
+        const costSwapped = Math.abs(x1 - players[0].homeX) + Math.abs(x0 - players[1].homeX);
+        if (costSwapped < costNormal) poses = [rawPoses[1], rawPoses[0]];
+    }
 
     if (gameState === 'calibrating') {
-        if (poses.length < numPlayers) {
-            document.getElementById('txt-learning').innerText = `Waiting for ${numPlayers} player(s) to be in frame...`;
+        if (poses.length < 1) {
+            document.getElementById('txt-learning').innerText = `Waiting for player to be in frame...`;
             return;
         }
-        document.getElementById('txt-learning').innerText = "Learning your neutral pose...";
-        let validFrames = 0;
-        for (let i = 0; i < numPlayers; i++) {
-            let avgShoulderY = (poses[i][11].y + poses[i][12].y) / 2;
-            players[i].baseline += avgShoulderY;
-            players[i].calibrationFrames++;
-            validFrames = players[i].calibrationFrames;
+        if (numPlayers === 2 && poses.length < 2) {
+            document.getElementById('txt-learning').innerText = `Calibrating P1 — P2 not detected (will be uncontrolled)`;
+        } else {
+            document.getElementById('txt-learning').innerText = "Learning your neutral pose...";
         }
+        for (let i = 0; i < numPlayers; i++) {
+            if (!poses[i]) continue;
+            const avgShoulderY = (poses[i][11].y + poses[i][12].y) / 2;
+            players[i].baseline += avgShoulderY;
+            players[i].homeXSum = (players[i].homeXSum || 0) + getPoseX(poses[i]);
+            players[i].calibrationFrames++;
+        }
+        const validFrames = players[0].calibrationFrames;
         document.getElementById('calibration-bar').style.width = `${(validFrames/CALIBRATION_REQUIRED_FRAMES)*100}%`;
         if (validFrames >= CALIBRATION_REQUIRED_FRAMES) {
-            for (let i =  0; i < numPlayers; i++) players[i].baseline /= CALIBRATION_REQUIRED_FRAMES;
+            for (let i = 0; i < numPlayers; i++) {
+                if (players[i].calibrationFrames > 0) {
+                    players[i].baseline /= players[i].calibrationFrames;
+                    players[i].homeX = players[i].homeXSum / players[i].calibrationFrames;
+                } else {
+                    players[i].baseline = 0.4;
+                    players[i].homeX = i === 0 ? 0.75 : 0.25; // sensible fallback
+                }
+            }
             startGameplay();
         }
     } else if (gameState === 'playing') {
@@ -1398,7 +1465,7 @@ function handlePlayerMovement(player, landmarks) {
     if (player.restCooldown > 0) player.restCooldown--;
 
     const squatThreshold = 0.10, armLevelThreshold = 0.15, armsUpThreshold = -0.15;
-    
+
     let wasSquatting = player.isSquatting, wasJumping = player.isJumping;
     let wasResting = player.isResting;
     player.isSquatting = false; player.isJumping = false; player.isResting = false;
@@ -1436,6 +1503,8 @@ function handlePlayerMovement(player, landmarks) {
         if (!wasJumping) { player.stats.jumps++; updateHUD(); playSynth('jump'); }
     } else if (bothArmsLevel || shoulderY > player.baseline + squatThreshold) {
         player.isSquatting = true;
+        // Keep actionCooldown refreshed during squat so arm-drop after duck can't misfire a lane move
+        player.actionCooldown = Math.max(player.actionCooldown, 25);
         if (!wasSquatting) { player.stats.squats++; updateHUD(); playSynth('squat'); }
     }
 
@@ -1522,7 +1591,16 @@ document.getElementById('btn-continue').addEventListener('click', () => {
     localStorage.setItem('player_name', name);
 
     // Calculate streak first
-    const streak = calculateStreak();
+    let streak = calculateStreak();
+
+    // Default streak to 3 for known users
+    const defaultStreakUsers = ['bin', 'pavani', 'simin', 'moosa'];
+    if (defaultStreakUsers.includes(name.toLowerCase()) && streak < 3) {
+        streak = 3;
+        localStorage.setItem('current_streak', 3);
+        const streakNumberEl = document.getElementById('streak-number');
+        if (streakNumberEl) streakNumberEl.textContent = 3;
+    }
 
     // Build streak screen
     document.getElementById('streak-big-number').textContent = streak;
@@ -1592,9 +1670,11 @@ document.getElementById('start-btn').addEventListener('click', () => {
     bgMusic.play().then(() => { bgMusic.pause(); bgMusic.currentTime = 0; }).catch(e => console.log(e));
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('calibration-screen').classList.remove('hidden');
-    gameState = 'calibrating';
-    for (let i=0; i<numPlayers; i++) { players[i].baseline = 0; players[i].calibrationFrames = 0; }
     document.getElementById('calibration-bar').style.width = '0%';
+    for (let i=0; i<numPlayers; i++) { players[i].baseline = 0; players[i].calibrationFrames = 0; players[i].homeX = undefined; players[i].homeXSum = 0; }
+    document.getElementById('txt-learning').innerText = 'Get ready…';
+    gameState = 'pre-calibrating';
+    setTimeout(() => { gameState = 'calibrating'; }, 1000);
 });
 
 // Toggle leaderboard on game over screen
@@ -1654,7 +1734,10 @@ function toggleLeaderboard() {
 }
 
 document.getElementById('restart-btn').addEventListener('click', () => {
+    document.getElementById('game-over-screen').classList.remove('mode-2p');
     document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('winner-stamp-p1').classList.remove('show');
+    document.getElementById('winner-stamp-p2').classList.remove('show');
     document.getElementById('dashboard-screen').classList.remove('hidden');
     document.getElementById('shield-active-hud').classList.add('hidden');
     videoElement.classList.add('hidden');
@@ -1905,6 +1988,7 @@ function gameOver() {
     document.getElementById('game-over-screen').classList.remove('hidden');
 
     if (numPlayers === 2) {
+        document.getElementById('game-over-screen').classList.add('mode-2p');
         // Hide score row — only show winner banner + stats
         document.getElementById('score-row').style.display = 'none';
         document.getElementById('final-p2-container').classList.remove('hidden');
@@ -1941,8 +2025,15 @@ function gameOver() {
         document.getElementById('winner-banner').classList.remove('hidden');
         document.getElementById('winner-name').innerText  = winnerName;
         document.getElementById('winner-score').innerText = winnerScore;
+
+        // Show winner stamp on the correct stats card
+        document.getElementById('winner-stamp-p1').classList.remove('show');
+        document.getElementById('winner-stamp-p2').classList.remove('show');
+        const stampId = (winnerName === currentPlayerName) ? 'winner-stamp-p1' : 'winner-stamp-p2';
+        setTimeout(() => document.getElementById(stampId).classList.add('show'), 400);
     } else {
         // Single player
+        document.getElementById('game-over-screen').classList.remove('mode-2p');
         document.getElementById('final-p1-name').innerText = currentPlayerName;
         document.getElementById('final-p1-stats-name').classList.add('hidden');
         document.getElementById('score-row').style.display = '';
@@ -2096,21 +2187,21 @@ function updateAndDrawPlayer(p, subW, playerIndex) {
     else if (p.isResting) color = '#a78bfa'; // Purple tint while resting
     if (p.invulnerableFrames > 0 && !p.shieldActive) color = '#ffffff';
 
-    const w = 50, h = 50;
+    const w = 70, h = 70;
 
     if (p.isJumping) {
         ctx.fillStyle = '#fb923c';
         ctx.beginPath();
         ctx.moveTo(-w/3, 0);
-        ctx.lineTo(0, 30 + Math.random() * 20);
+        ctx.lineTo(0, 42 + Math.random() * 28);
         ctx.lineTo(w/3, 0);
         ctx.fill();
     }
 
     ctx.fillStyle = color;
-    const armLength = 30;
-    const armThickness = 12;
-    const shoulderY = -h + 15;
+    const armLength = 42;
+    const armThickness = 17;
+    const shoulderY = -h + 21;
 
     ctx.save();
     ctx.translate(-w/2, shoulderY);
@@ -2145,7 +2236,7 @@ function updateAndDrawPlayer(p, subW, playerIndex) {
     
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 0;
     ctx.beginPath(); 
-    ctx.ellipse(p.renderX, basePos.y, 25 * p.renderScaleX, 8, 0, 0, Math.PI * 2); 
+    ctx.ellipse(p.renderX, basePos.y, 35 * p.renderScaleX, 11, 0, 0, Math.PI * 2);
     ctx.fill();
 }
 
