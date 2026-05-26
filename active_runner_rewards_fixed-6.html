@@ -1,0 +1,1893 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Active Runner Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontSize: {
+                        'base': '1.125rem',
+                        'lg': '1.25rem',
+                        'xl': '1.5rem',
+                        '2xl': '1.875rem',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ── ANIMATED LOADER ───────────────────────────── */
+        #loader {
+          position: fixed; inset: 0; z-index: 9000;
+          background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+        #loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .loader-logo { display:flex; flex-direction:column; align-items:center; margin-bottom:44px; animation: loaderFadeIn 0.8s ease both; }
+        @keyframes loaderFadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        .runner-wrap { position:relative; width:200px; height:140px; margin-bottom:10px; }
+        .runner-wrap::after { content:''; position:absolute; bottom:10px; left:10px; right:10px; height:2px; background:linear-gradient(90deg,transparent,rgba(99,102,241,0.6),transparent); border-radius:2px; }
+        .runner-shadow { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); width:56px; height:9px; background:radial-gradient(ellipse,rgba(99,102,241,0.4) 0%,transparent 70%); animation:shadowPulse 0.55s ease-in-out infinite alternate; }
+        @keyframes shadowPulse { from{transform:translateX(-50%) scaleX(1);opacity:0.5} to{transform:translateX(-50%) scaleX(0.7);opacity:0.25} }
+        .logo-title { font-family:'Cormorant Garamond',Georgia,serif; font-size:3rem; font-weight:700; color:#fff; letter-spacing:0.04em; line-height:1; text-align:center; margin-bottom:6px; }
+        .logo-title em { font-style:normal; color:#818cf8; }
+        .logo-sub { font-family:'Segoe UI',sans-serif; font-size:0.85rem; letter-spacing:0.3em; text-transform:uppercase; color:#6366f1; text-align:center; }
+        .progress-track { width:min(300px,70vw); height:5px; background:rgba(255,255,255,0.08); border-radius:10px; overflow:hidden; margin-top:10px; animation:loaderFadeIn 0.8s ease 0.3s both; }
+        .progress-fill { height:100%; width:0%; border-radius:10px; background:linear-gradient(90deg,#6366f1,#818cf8,#a5b4fc); background-size:200%; animation:progressShimmer 1.5s linear infinite; transition:width 0.12s linear; }
+        @keyframes progressShimmer { 0%{background-position:0%} 100%{background-position:200%} }
+        .progress-label { font-family:'Segoe UI',sans-serif; font-size:0.85rem; letter-spacing:0.1em; color:rgba(255,255,255,0.35); text-transform:uppercase; margin-top:8px; animation:loaderFadeIn 0.8s ease 0.3s both; }
+        /* Runner animations */
+        .runner-head  { animation:headBob  0.55s ease-in-out infinite alternate; }
+        @keyframes headBob  { from{transform:translateY(0)} to{transform:translateY(-2px)} }
+        .runner-torso { animation:bodyLean 0.55s ease-in-out infinite alternate; transform-origin:50% 100%; }
+        @keyframes bodyLean { from{transform:rotate(-3deg)} to{transform:rotate(2deg)} }
+        .arm-f { animation:armF 0.55s ease-in-out infinite alternate; transform-origin:50% 0%; }
+        .arm-b { animation:armB 0.55s ease-in-out infinite alternate; transform-origin:50% 0%; }
+        @keyframes armF { from{transform:rotate(-35deg)} to{transform:rotate(20deg)} }
+        @keyframes armB { from{transform:rotate(20deg)}  to{transform:rotate(-35deg)} }
+        .leg-f  { animation:legF  0.55s ease-in-out infinite alternate; transform-origin:50% 0%; }
+        .leg-b  { animation:legB  0.55s ease-in-out infinite alternate; transform-origin:50% 0%; }
+        @keyframes legF  { from{transform:rotate(-40deg)} to{transform:rotate(30deg)} }
+        @keyframes legB  { from{transform:rotate(30deg)}  to{transform:rotate(-40deg)} }
+        .shin-f { animation:shinF 0.55s ease-in-out infinite alternate; transform-origin:50% 0%; }
+        .shin-b { animation:shinB 0.55s ease-in-out infinite alternate; transform-origin:50% 0%; }
+        @keyframes shinF { from{transform:rotate(10deg)}   to{transform:rotate(-30deg)} }
+        @keyframes shinB { from{transform:rotate(-30deg)}  to{transform:rotate(10deg)} }
+        .dust { animation:dustPuff 0.55s ease-out infinite; }
+        .dust:nth-child(2){animation-delay:0.18s}
+        .dust:nth-child(3){animation-delay:0.36s}
+        @keyframes dustPuff { 0%{transform:translateX(0) scale(0.3);opacity:0.5} 100%{transform:translateX(-28px) scale(1.4);opacity:0} }
+
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background-color 0.3s; }
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        #game-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
+        #webcam-video { display: none !important; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 30; pointer-events: none; }
+        .pointer-events-auto { pointer-events: auto; }
+        .hidden { display: none !important; }
+        
+        input:focus, select:focus, button:focus {
+            outline: 4px solid #3b82f6;
+            outline-offset: 2px;
+        }
+        #center-screens { overflow-y: auto; }
+
+        /* ── ANIMATED BACKGROUND (from login.html) ──────────── */
+        #bg-canvas {
+            position: fixed; inset: 0;
+            width: 100%; height: 100%;
+            z-index: 5;
+        }
+        /* Floating koru SVGs */
+        .koru-ambient {
+            position: fixed; pointer-events: none; z-index: 1;
+            opacity: 0;
+            animation: koruDrift 18s ease-in-out infinite;
+        }
+        .koru-ambient:nth-child(1) { top: 5%; left: -60px; width: 220px; animation-delay: 0s; animation-duration: 20s; }
+        .koru-ambient:nth-child(2) { top: 50%; right: -50px; width: 180px; animation-delay: 4s; animation-duration: 24s; transform-origin: right center; }
+        .koru-ambient:nth-child(3) { bottom: 5%; left: 5%; width: 140px; animation-delay: 8s; animation-duration: 18s; }
+        .koru-ambient:nth-child(4) { top: 8%; right: 4%; width: 100px; animation-delay: 12s; animation-duration: 22s; }
+        @keyframes koruDrift {
+            0%   { opacity: 0;    transform: translateY(10px) rotate(0deg); }
+            15%  { opacity: 0.25; }
+            50%  { opacity: 0.35; transform: translateY(-18px) rotate(8deg); }
+            85%  { opacity: 0.25; }
+            100% { opacity: 0;    transform: translateY(10px) rotate(0deg); }
+        }
+        /* Tapa texture overlay */
+        body::after {
+            content: ''; position: fixed; inset: 0; z-index: 2; pointer-events: none;
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(42,157,143,0.06) 24px, rgba(42,157,143,0.06) 26px),
+                repeating-linear-gradient(90deg, transparent, transparent 24px, rgba(42,157,143,0.06) 24px, rgba(42,157,143,0.06) 26px);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-[#1a202c] text-gray-900 dark:text-white">
+
+<div id="game-container">
+
+    <!-- ── ANIMATED LOADER ───────────────────── -->
+    <div id="loader">
+        <div class="loader-logo">
+            <div class="runner-wrap">
+                <div class="runner-shadow"></div>
+                <svg viewBox="0 0 220 150" width="200" height="140" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+                    <defs>
+                        <radialGradient id="lBodyG" cx="50%" cy="30%" r="70%"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#6366f1"/></radialGradient>
+                        <radialGradient id="lSkinG" cx="40%" cy="30%" r="70%"><stop offset="0%" stop-color="#e8b896"/><stop offset="100%" stop-color="#c8906a"/></radialGradient>
+                    </defs>
+                    <g transform="translate(72,128)">
+                        <ellipse class="dust" cx="0"  cy="0"  rx="7" ry="4"   fill="rgba(99,102,241,0.35)"/>
+                        <ellipse class="dust" cx="-4" cy="-2" rx="5" ry="3"   fill="rgba(99,102,241,0.22)"/>
+                        <ellipse class="dust" cx="-8" cy="1"  rx="4" ry="2.5" fill="rgba(99,102,241,0.15)"/>
+                    </g>
+                    <g class="leg-b" transform="translate(108,90)">
+                        <rect x="-5" y="0" width="10" height="28" rx="5" fill="#4338ca"/>
+                        <g class="shin-b" transform="translate(0,26)"><rect x="-4" y="0" width="8" height="24" rx="4" fill="#4338ca"/><ellipse cx="-6" cy="23" rx="10" ry="4" fill="#3730a3"/></g>
+                    </g>
+                    <g class="arm-b" transform="translate(108,62)"><rect x="-4" y="0" width="8" height="22" rx="4" fill="#c8906a"/><rect x="-3" y="18" width="6" height="16" rx="3" fill="#b87858" transform="rotate(15,0,18)"/></g>
+                    <g class="runner-torso" transform="translate(108,60)">
+                        <rect x="-10" y="0" width="20" height="30" rx="6" fill="url(#lBodyG)"/>
+                        <rect x="-10" y="26" width="20" height="12" rx="4" fill="#ef4444"/>
+                        <g class="runner-head" transform="translate(0,-30)">
+                            <rect x="-4" y="18" width="8" height="12" rx="3" fill="#c8906a"/>
+                            <ellipse cx="0" cy="12" rx="14" ry="15" fill="url(#lSkinG)"/>
+                            <ellipse cx="0" cy="1"  rx="14" ry="7"  fill="#2a1a0a"/>
+                            <rect x="-14" y="4" width="28" height="5" rx="2" fill="#6366f1"/>
+                            <ellipse cx="6"   cy="12" rx="3"   ry="3.5" fill="white"/>
+                            <ellipse cx="7"   cy="12" rx="1.8" ry="2"   fill="#1a1a1a"/>
+                            <ellipse cx="-13" cy="13" rx="3"   ry="4"   fill="#b87858"/>
+                        </g>
+                    </g>
+                    <g class="arm-f" transform="translate(108,62)"><rect x="-4" y="0" width="8" height="22" rx="4" fill="#c8906a"/><rect x="-3" y="18" width="6" height="16" rx="3" fill="#b87858" transform="rotate(-20,0,18)"/></g>
+                    <g class="leg-f" transform="translate(108,90)">
+                        <rect x="-5" y="0" width="10" height="28" rx="5" fill="#6366f1"/>
+                        <g class="shin-f" transform="translate(0,26)"><rect x="-4" y="0" width="8" height="24" rx="4" fill="#6366f1"/><ellipse cx="6" cy="23" rx="12" ry="4" fill="#ef4444"/></g>
+                    </g>
+                </svg>
+            </div>
+            <p class="logo-title">Active <em>Runner</em></p>
+            <p class="logo-sub">Hei Manaaki ngā Kaumātua</p>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="loader-bar"></div></div>
+        <p class="progress-label" id="loader-label">Initialising…</p>
+    </div>
+    <!-- Hidden source video (used by MediaPipe) -->
+    <video id="webcam-video" class="hidden" autoplay playsinline></video>
+    <!-- Split camera: P1 left, P2 right — only shown in 2P mode during gameplay -->
+    <div id="split-cam-container" style="position:absolute;bottom:16px;left:0;width:100%;display:none;justify-content:space-between;pointer-events:none;z-index:20;">
+        <canvas id="cam-left"  width="220" height="165" style="position:static;width:220px;height:165px;border-radius:12px;border:3px solid rgba(239,68,68,0.7);opacity:0.85;margin-left:16px;"></canvas>
+        <canvas id="cam-right" width="220" height="165" style="position:static;width:220px;height:165px;border-radius:12px;border:3px solid rgba(59,130,246,0.7);opacity:0.85;margin-right:16px;"></canvas>
+    </div>
+    <!-- Single camera for 1P — unchanged -->
+    <canvas id="cam-single" width="240" height
+                <p class="text-4xl font-black text-gray-900 dark:text-white" id="score-display-1p">0</p>
+            </div>
+            
+            <div class="bg-red-100/90 dark:bg-red-600/80 backdrop-blur rounded-xl p-4 border border-red-400 shadow-xl text-center mx-4 flex-1 max-w-[150px]">
+                <p class="text-red-700 dark:text-red-200 text-sm font-bold uppercase tracking-wider" id="txt-hud-lives-1p">Lives</p>
+                <p class="text-4xl font-black text-red-900 dark:text-white" id="lives-display-1p">3</p>
+            </div>
+
+            <!-- Shield orb counter HUD -->
+            <div class="bg-cyan-100/90 dark:bg-cyan-800/80 backdrop-blur rounded-xl p-4 border border-cyan-400 shadow-xl text-center mx-2 flex-1 max-w-[130px]" id="hud-shields">
+                <p class="text-cyan-700 dark:text-cyan-200 text-sm font-bold uppercase tracking-wider">Shields</p>
+                <p class="text-4xl font-black text-cyan-900 dark:text-white" id="shield-display-1p">0</p>
+            </div>
+
+            <div class="bg-indigo-100/90 dark:bg-indigo-600/80 backdrop-blur rounded-xl p-4 border border-indigo-400 shadow-xl text-right">
+                <p class="text-indigo-700 dark:text-indigo-200 text-2xl font-black uppercase tracking-wide" id="p1-hud-name-1p">Player 1</p>
+                <p class="text-indigo-700 dark:text-indigo-200 text-sm font-bold uppercase tracking-wider" id="txt-hud-activity-1p">Activity</p>
+                <p class="text-2xl font-black text-indigo-900 dark:text-white"><span id="squats-display-1p">0</span> <span id="txt-hud-squats-1p">Squats</span></p>
+                <p class="text-2xl font-black text-indigo-900 dark:text-white"><span id="jumps-display-1p">0</span> <span id="txt-hud-jumps-1p">Jumps</span></p>
+                <p class="text-xl font-bold text-orange-600 dark:text-yellow-400 mt-1"><span id="calories-display-1p">0.0</span> kcal</p>
+            </div>
+        </div>
+
+        <!-- 2 PLAYER HUD -->
+        <div class="flex justify-between items-start w-full max-w-6xl mx-auto hidden" id="hud-2p">
+            <!-- P2 HUD (red) — LEFT side of screen -->
+            <div id="hud-p2" class="bg-red-100/90 dark:bg-red-900/80 backdrop-blur rounded-xl p-4 border border-red-400 shadow-xl flex gap-3">
+                <div class="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 text-center min-w-[80px]">
+                    <p class="text-red-600 dark:text-red-400 text-xs font-bold uppercase tracking-wider">Score</p>
+                    <p class="text-3xl font-black text-gray-900 dark:text-white" id="score-display-2p-p2">0</p>
+                </div>
+                <div class="bg-red-200/80 dark:bg-red-700/60 rounded-lg p-3 text-center min-w-[60px]">
+                    <p class="text-red-600 dark:text-red-200 text-xs font-bold uppercase tracking-wider">Lives</p>
+                    <p class="text-3xl font-black text-red-900 dark:text-white" id="p2-lives-display">3</p>
+                </div>
+                <div class="bg-cyan-100/80 dark:bg-cyan-800/60 rounded-lg p-3 text-center min-w-[60px]">
+                    <p class="text-cyan-600 dark:text-cyan-300 text-xs font-bold uppercase tracking-wider">Shields</p>
+                    <p class="text-3xl font-black text-cyan-900 dark:text-white" id="p2-shields">0</p>
+                </div>
+                <div class="bg-rose-100/80 dark:bg-rose-700/60 rounded-lg p-3 text-right">
+                    <p class="text-rose-700 dark:text-rose-200 text-2xl font-black uppercase tracking-wide" id="p2-hud-name">Player 2</p>
+                    <p class="text-lg font-black text-rose-900 dark:text-white"><span id="p2-squats">0</span> Squats</p>
+                    <p class="text-lg font-black text-rose-900 dark:text-white"><span id="p2-jumps">0</span> Jumps</p>
+                    <p class="text-base font-bold text-orange-600 dark:text-yellow-400"><span id="p2-calories">0.0</span> kcal</p>
+                </div>
+            </div>
+            <!-- P1 HUD (blue) — RIGHT side of screen, matching P1's physical right position -->
+            <div id="hud-p1" class="bg-blue-100/90 dark:bg-blue-900/80 backdrop-blur rounded-xl p-4 border border-blue-400 shadow-xl flex gap-3">
+                <div class="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 text-center min-w-[80px]">
+                    <p class="text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider">Score</p>
+                    <p class="text-3xl font-black text-gray-900 dark:text-white" id="score-display-2p">0</p>
+                </div>
+                <div class="bg-red-100/80 dark:bg-red-700/60 rounded-lg p-3 text-center min-w-[60px]">
+                    <p class="text-red-600 dark:text-red-200 text-xs font-bold uppercase tracking-wider">Lives</p>
+                    <p class="text-3xl font-black text-red-900 dark:text-white" id="p1-lives-display">3</p>
+                </div>
+                <div class="bg-cyan-100/80 dark:bg-cyan-800/60 rounded-lg p-3 text-center min-w-[60px]">
+                    <p class="text-cyan-600 dark:text-cyan-300 text-xs font-bold uppercase tracking-wider">Shields</p>
+                    <p class="text-3xl font-black text-cyan-900 dark:text-white" id="p1-shields">0</p>
+                </div>
+                <div class="bg-indigo-100/80 dark:bg-indigo-700/60 rounded-lg p-3 text-right">
+                    <p class="text-indigo-700 dark:text-indigo-200 text-2xl font-black uppercase tracking-wide" id="p1-hud-name">Player 1</p>
+                    <p class="text-lg font-black text-indigo-900 dark:text-white"><span id="p1-squats">0</span> Squats</p>
+                    <p class="text-lg font-black text-indigo-900 dark:text-white"><span id="p1-jumps">0</span> Jumps</p>
+                    <p class="text-base font-bold text-orange-600 dark:text-yellow-400"><span id="p1-calories">0.0</span> kcal</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Screens -->
+        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto" id="center-screens">
+            
+            <!-- LOGIN SCREEN -->
+            <div id="login-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-indigo-500/40 text-center max-w-xl w-[90%] shadow-2xl backdrop-blur-md">
+                <div class="flex flex-col sm:flex-row justify-between gap-4 mb-8 bg-gray-100 dark:bg-gray-800 p-4 rounded-xl">
+                    <select id="lang-select" class="flex-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xl p-3 rounded-lg border-2 border-gray-300 dark:border-gray-500 font-bold cursor-pointer">
+                        <option value="en">English</option>
+                        <option value="mi">Te Reo Māori</option>
+                    </select>
+                    <select id="theme-select" class="flex-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xl p-3 rounded-lg border-2 border-gray-300 dark:border-gray-500 font-bold cursor-pointer">
+                        <option value="dark" id="txt-theme-dark">Dark Theme</option>
+                        <option value="light" id="txt-theme-light">Light Theme</option>
+                    </select>
+                </div>
+                <h1 id="txt-welcome" class="text-4xl font-black mb-4 text-gray-900 dark:text-white">Welcome to Active Runner</h1>
+                <p id="txt-instruction" class="text-2xl text-gray-700 dark:text-gray-300 mb-8 font-semibold">Please enter your name to begin.</p>
+                <input type="text" id="player-name" placeholder="Your Name" class="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-3xl p-5 rounded-xl border-4 border-gray-300 dark:border-gray-600 mb-8 text-center font-bold" />
+                <button type="button" id="btn-continue" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl w-full">
+                    Continue
+                </button>
+            </div>
+
+            <!-- DAILY STREAK SCREEN -->
+            <div id="streak-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-orange-400/60 text-center max-w-xl w-[90%] shadow-2xl backdrop-blur-md hidden">
+                <!-- Title -->
+                <div class="flex items-center justify-center gap-3 mb-2">
+                    <span class="text-4xl">🔥</span>
+                    <h1 class="text-4xl font-black" style="background:linear-gradient(90deg,#22c55e,#fbbf24,#fb923c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Daily Play Streak</h1>
+                </div>
+                <p class="text-sm font-bold text-gray-400 dark:text-gray-500 tracking-widest mb-6">KEEP PLAYING EVERY DAY</p>
+
+                <!-- Big streak number -->
+                <p id="streak-big-number" class="text-8xl font-black text-yellow-400 mb-4">1</p>
+                <p id="streak-big-msg" class="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-6">🎉 3 Days in a Row!</p>
+
+                <!-- Day dots -->
+                <div class="flex justify-center gap-8 mb-6">
+                    <div class="flex flex-col items-center gap-2">
+                        <div id="dot-2ago" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400">○</div>
+                        <span class="text-sm font-bold text-gray-500">2 days ago</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2">
+                        <div id="dot-yesterday" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400">○</div>
+                        <span class="text-sm font-bold text-gray-500">Yesterday</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2">
+                        <div id="dot-today" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-green-500 bg-green-500/20 text-white">✓</div>
+                        <span class="text-sm font-bold text-gray-500">Today</span>
+                    </div>
+                </div>
+
+                <!-- Warning -->
+                <div class="bg-orange-100 border-2 border-orange-500 rounded-2xl px-6 py-4 mb-6">
+                    <p class="text-orange-700 font-black text-xl">⚠️ Miss a day and your streak resets to 0!</p>
+                </div>
+
+                <!-- Next button -->
+                <button id="btn-streak-next" class="w-full text-gray-900 font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl" style="background:linear-gradient(135deg,#22c55e,#06b6d4);">
+                    Next →
+                </button>
+            </div>
+
+            <!-- DASHBOARD SCREEN -->
+            <div id="dashboard-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-indigo-500/40 text-center max-w-3xl w-[95%] shadow-2xl backdrop-blur-md hidden mt-4 mb-4">
+                <h1 id="txt-hello" class="text-4xl md:text-5xl font-black mb-6 text-gray-900 dark:text-white">Hello, </h1>
+                
+                <div class="flex flex-col md:flex-row gap-6 mb-8">
+                    <div class="flex-1 bg-blue-50 dark:bg-blue-900/30 border-4 border-blue-400 p-6 rounded-2xl flex flex-col justify-center">
+                        <h2 id="txt-streak-title" class="text-2xl font-bold text-blue-800 dark:text-blue-300 mb-2">Daily Login Streak</h2>
+                        <div class="text-6xl font-black text-blue-600 dark:text-blue-400 flex justify-center items-center gap-4">
+                            <span>🔥</span> <span id="streak-number">1</span> <span>🔥</span>
+                        </div>
+                        <!-- Streak reward notice -->
+                        <div id="streak-reward-notice" class="hidden mt-3 bg-cyan-100 dark:bg-cyan-900/50 border-2 border-cyan-400 rounded-xl p-3">
+                            <p class="text-cyan-800 dark:text-cyan-300 font-bold text-lg">🛡️ 3-Day Streak Bonus! You'll start with <strong>5 shields</strong>!</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 flex flex-col gap-4">
+                        <div class="flex justify-center gap-2">
+                            <button id="btn-mode-1p" class="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-xl border-4 border-indigo-400 transform transition">1 Player</button>
+                            <button id="btn-mode-2p" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-3 rounded-xl border-4 border-transparent transform transition">2 Player</button>
+                        </div>
+                        <!-- P2 name input shown in 2P mode -->
+                        <div id="p2-name-input-wrap" class="hidden">
+                            <input type="text" id="player2-name" placeholder="Player 2 Name" class="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-2xl p-4 rounded-xl border-4 border-red-300 dark:border-red-600 text-center font-bold" />
+                        </div>
+                        <button id="btn-play" class="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-black py-6 px-8 rounded-2xl shadow-xl transform transition hover:scale-105 active:scale-95 text-3xl flex flex-col justify-center items-center gap-2">
+                            <span id="txt-play-btn">Start Camera & Play</span>
+                            <span class="text-lg font-bold opacity-80" id="txt-play-sub">Get ready to move!</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Reward guide -->
+                <div class="bg-gray-50 dark:bg-gray-800/60 rounded-2xl p-4 border-2 border-gray-200 dark:border-gray-700 mb-6 text-left">
+                    <h3 class="text-xl font-black text-gray-800 dark:text-gray-200 mb-3">🎁 Collect Orbs While Playing!</h3>
+                    <div class="flex gap-4">
+                        <div class="flex items-center gap-2 flex-1">
+                            <span class="text-3xl">🔵</span>
+                            <div>
+                                <p class="font-black text-cyan-700 dark:text-cyan-300">Cyan Shield Orb</p>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Collect orbs → cross arms to activate rest shield</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-1">
+                            <span class="text-3xl">💗</span>
+                            <div>
+                                <p class="font-black text-pink-700 dark:text-pink-300">Pink Heart Orb</p>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Gain +1 extra life instantly</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 border-2 border-gray-200 dark:border-gray-700">
+                    <div class="flex justify-between items-center border-b-2 border-gray-300 dark:border-gray-600 pb-2 mb-4">
+                        <h2 class="text-3xl font-black text-gray-800 dark:text-gray-200 text-left">🏆 Top Players</h2>
+                        <button id="btn-toggle-lb" onclick="toggleLeaderboard()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-2 px-5 rounded-xl shadow transform transition hover:scale-105 active:scale-95 text-lg">🏆 Leaderboard</button>
+                    </div>
+                    <div id="leaderboard-table-wrap" style="display:none;">
+                        <!-- Normal / Chill tab switcher -->
+                        <div class="flex gap-2 mb-4">
+                            <button id="lb-tab-normal" onclick="switchLBTab('normal')" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-xl border-2 border-green-400 text-lg">Normal</button>
+                            <button id="lb-tab-chill" onclick="switchLBTab('chill')" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-2 rounded-xl border-2 border-transparent text-lg">Chill Mode</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xl">
+                                <thead>
+                                    <tr class="text-gray-500 dark:text-gray-400 border-b border-gray-300 dark:border-gray-600">
+                                        <th id="txt-rank" class="p-3 font-bold">Rank</th>
+                                        <th id="txt-name" class="p-3 font-bold">Name</th>
+                                        <th id="txt-score" class="p-3 font-bold">Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leaderboard-body" class="text-gray-800 dark:text-gray-200 font-semibold"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading AI -->
+            <div id="loading-screen" class="bg-white/95 dark:bg-gray-900/90 p-8 rounded-3xl border-4 border-gray-300 dark:border-gray-700 text-center max-w-md w-[90%] backdrop-blur-md hidden shadow-2xl">
+                <div class="animate-spin inline-block w-16 h-16 border-[6px] border-current border-t-transparent text-indigo-600 dark:text-indigo-500 rounded-full mb-6"></div>
+                <h1 class="text-4xl font-black mb-4 bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400 bg-clip-text text-transparent">Active Runner</h1>
+                <p id="txt-loading-ai" class="text-2xl text-gray-700 dark:text-gray-300 font-bold">Loading AI Engine...</p>
+                <p id="txt-loading-sub" class="text-lg text-gray-500 mt-4 font-semibold">Please allow camera access when prompted.</p>
+            </div>
+
+            <!-- Warning screen -->
+            <div id="warning-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 md:p-10 rounded-3xl border-4 border-amber-500/60 text-left max-w-2xl w-[90%] backdrop-blur-md hidden shadow-2xl">
+                <h2 id="txt-warning-title" class="text-4xl md:text-5xl font-black text-amber-600 dark:text-amber-400 mb-6 border-b-2 border-amber-200 dark:border-amber-900 pb-2">Safety Warning</h2>
+                <p id="txt-warning-1" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-6">
+                    Please play in a clear, dry, non-slip area with enough room to move both arms.
+                </p>
+                <ul class="text-gray-700 dark:text-amber-100/95 text-xl font-medium leading-relaxed space-y-4 mb-8 list-disc pl-6">
+                    <li id="txt-warning-2">Go at your own pace and hold nearby support if needed.</li>
+                    <li id="txt-warning-3">Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.</li>
+                </ul>
+                <button type="button" id="warning-continue-btn" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-black py-5 px-6 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-2xl md:text-3xl w-full">
+                    I understand
+                </button>
+            </div>
+
+            <!-- Start / Calibrate -->
+            <div id="start-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl border-4 border-green-500/50 text-center max-w-lg w-[90%] backdrop-blur-md hidden shadow-2xl">
+                <h1 id="txt-ready" class="text-5xl font-black mb-6 text-gray-900 dark:text-white">Ready to move?</h1>
+                <p id="txt-ready-sub" class="text-2xl text-gray-700 dark:text-gray-300 mb-6 font-semibold">Step back so your upper body is visible. Stand still in the center to calibrate.</p>
+
+                <!-- Normal / Chill Mode selection — exactly like index.html -->
+                <div class="flex justify-center gap-2 mb-8">
+                    <button id="btn-speed-normal" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl border-4 border-green-400 transform transition text-xl">Normal</button>
+                    <button id="btn-speed-chill" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-3 rounded-xl border-4 border-transparent transform transition text-xl">Chill Mode</button>
+                </div>
+
+                <button id="start-btn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-black py-6 px-8 rounded-2xl shadow-lg transform transition hover:scale-105 active:scale-95 text-3xl w-full">
+                    Start Calibration
+                </button>
+            </div>
+
+            <!-- Calibration Progress -->
+            <div id="calibration-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl border-4 border-yellow-500/50 text-center max-w-lg w-[90%] backdrop-blur-md hidden shadow-2xl">
+                <h2 id="txt-stand-still" class="text-4xl font-black mb-6 text-yellow-600 dark:text-yellow-400">Stand Still...</h2>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-8 mb-6 border-2 border-gray-300 dark:border-gray-600">
+                    <div id="calibration-bar" class="bg-yellow-400 h-full rounded-full transition-all duration-100" style="width: 0%"></div>
+                </div>
+                <p id="txt-learning" class="text-2xl text-gray-700 dark:text-gray-300 font-bold">Learning your neutral pose.</p>
+            </div>
+
+            <!-- Game Over -->
+            <div id="game-over-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-green-500/60 text-center max-w-2xl w-[90%] backdrop-blur-md hidden shadow-[0_0_50px_rgba(34,197,94,0.3)]" style="max-height:90vh;overflow-y:auto;">
+                <h1 id="txt-game-over" class="text-5xl font-black mb-2 text-green-600 dark:text-green-400">Great Job!</h1>
+
+                <!-- Winner banner — 2P mode only -->
+                <div id="winner-banner" class="hidden mb-4 bg-yellow-400 rounded-2xl py-3 px-6">
+                    <p class="text-3xl font-black text-gray-900">🏆 <span id="winner-name"></span> wins! — <span id="winner-score" class="text-indigo-700"></span> pts</p>
+                </div>
+
+                <!-- Score row — single player only -->
+                <div id="score-row" class="flex justify-around gap-4 mb-4">
+                    <div class="flex-1 bg-blue-50 dark:bg-blue-900/40 p-4 rounded-2xl border border-blue-300 dark:border-blue-700">
+                        <p class="text-blue-800 dark:text-blue-300 font-black text-xl uppercase mb-1" id="final-p1-name">Player 1</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm">SCORE</p>
+                        <p class="text-4xl font-black text-indigo-600 dark:text-indigo-400" id="final-score">0</p>
+                    </div>
+                </div>
+
+                <!-- Stats row -->
+                <div class="flex flex-col sm:flex-row justify-around gap-4 mb-6">
+                    <div class="flex-1 bg-blue-50 dark:bg-blue-900/40 p-5 rounded-2xl border border-blue-300 dark:border-blue-700">
+                        <p class="text-blue-800 dark:text-blue-300 font-black text-lg uppercase mb-2" id="final-p1-stats-name">Player 1</p>
+                        <div class="flex justify-between text-lg font-bold">
+                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">SQUATS</span> <span id="final-p1-squats" class="text-3xl">0</span></div>
+                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">JUMPS</span> <span id="final-p1-jumps" class="text-3xl">0</span></div>
+                        </div>
+                    </div>
+                    <div id="final-p2-container" class="hidden flex-1 bg-red-50 dark:bg-red-900/40 p-5 rounded-2xl border border-red-300 dark:border-red-700">
+                        <p class="text-red-800 dark:text-red-300 font-black text-lg uppercase mb-2" id="final-p2-stats-name">Player 2</p>
+                        <div class="flex justify-between text-lg font-bold">
+                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">SQUATS</span> <span id="final-p2-squats" class="text-3xl">0</span></div>
+                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">JUMPS</span> <span id="final-p2-jumps" class="text-3xl">0</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Leaderboard inside game over — hidden by default -->
+                <div id="gameover-lb-wrap" class="hidden bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 border-2 border-gray-200 dark:border-gray-700 mb-6 text-left">
+                    <h2 class="text-3xl font-black mb-3 text-gray-800 dark:text-gray-200 border-b-2 border-gray-300 dark:border-gray-600 pb-2">🏆 Top Players</h2>
+                    <!-- Normal / Chill tabs -->
+                    <div class="flex gap-2 mb-4">
+                        <button id="go-lb-tab-normal" onclick="switchGOLBTab('normal')" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-xl border-2 border-green-400 text-lg">Normal</button>
+                        <button id="go-lb-tab-chill" onclick="switchGOLBTab('chill')" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-2 rounded-xl border-2 border-transparent text-lg">Chill Mode</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xl">
+                            <thead>
+                                <tr class="text-gray-500 dark:text-gray-400 border-b border-gray-300 dark:border-gray-600">
+                                    <th class="p-3 font-bold">Rank</th>
+                                    <th class="p-3 font-bold">Name</th>
+                                    <th class="p-3 font-bold">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gameover-leaderboard-body" class="text-gray-800 dark:text-gray-200 font-semibold"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Two buttons side by side -->
+                <div class="flex gap-4">
+                    <button id="restart-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl">
+                        Return to Dashboard
+                    </button>
+                    <button id="btn-gameover-lb" onclick="toggleGameoverLB()" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl">
+                        🏆 Leaderboard
+                    </button>
+                </div>
+            </div>
+
+        </div>
+        
+        <!-- Level Up Overlay -->
+        <div id="level-up-overlay" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none hidden z-50">
+            <h1 class="text-7xl md:text-9xl font-black mb-6 text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,1)] animate-bounce uppercase italic tracking-widest">Level Up!</h1>
+            <p id="level-prompt-text" class="text-4xl font-black text-white bg-indigo-900/95 px-12 py-6 rounded-3xl backdrop-blur-md border-4 border-indigo-400 shadow-2xl text-center"></p>
+        </div>
+
+        <!-- Orb Collect Notification -->
+        <div id="orb-notify" class="absolute top-24 left-1/2 -translate-x-1/2 pointer-events-none hidden z-50">
+            <p id="orb-notify-text" class="text-3xl font-black text-white px-8 py-4 rounded-2xl shadow-2xl text-center"></p>
+        </div>
+
+        <!-- Streak Bonus Banner -->
+        <div id="streak-bonus-banner" class="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-none hidden z-50 bg-cyan-500/95 dark:bg-cyan-600/95 border-4 border-cyan-300 rounded-2xl px-8 py-4 shadow-2xl text-center">
+            <p class="text-white font-black text-2xl">🔥 3-Day Streak! 🛡️ +5 Shields Bonus!</p>
+        </div>
+
+        <!-- Shield Active Overlay (shown on canvas via JS, this just shows the rest-mode text hint) -->
+        <div id="shield-active-hud" class="absolute bottom-32 left-1/2 -translate-x-1/2 pointer-events-none hidden z-40">
+            <div class="bg-cyan-500/90 border-4 border-cyan-300 rounded-2xl px-8 py-3 shadow-2xl text-center">
+                <p class="text-white font-black text-xl">🛡️ REST MODE — You are protected!</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+/**
+ * UI STATE & TRANSLATIONS
+ */
+let currentPlayerName = "Player 1";
+let currentPlayer2Name = "Player 2";
+let isCameraInitialized = false;
+let numPlayers = 1;
+
+const translations = {
+    en: {
+        themeDark: "Dark Theme", themeLight: "Light Theme",
+        welcome: "Welcome to Active Runner", instruction: "Please enter your name to begin.",
+        placeholder: "Your Name", continueBtn: "Continue",
+        hello: "Hello, ", streakTitle: "Daily Login Streak",
+        playBtn: "Start Camera & Play", playSub: "Get ready to move!",
+        leaderboard: "Top Players", rank: "Rank", name: "Name", score: "Score",
+        loadingAi: "Loading AI Engine...", loadingSub: "Please allow camera access when prompted.",
+        warningTitle: "Safety Warning", warning1: "Please play in a clear, dry, non-slip area with enough room to move both arms.",
+        warning2: "Go at your own pace and hold nearby support if needed.", warning3: "Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.",
+        warningBtn: "I understand", ready: "Ready to move?",
+        readySub: "Step back so your upper body is visible. Stand still in the center to calibrate.",
+        startCalBtn: "Start Calibration", standStill: "Stand Still...", learning: "Learning your neutral pose.",
+        gameOver: "Great Job!", finalScore: "Score: ", returnDash: "Return to Dashboard",
+        hudScore1p: "Score", hudLives1p: "Lives", hudActivity1p: "Activity", hudSquats1p: "Squats", hudJumps1p: "Jumps"
+    },
+    mi: {
+        themeDark: "Kupu Pōuri (Dark)", themeLight: "Kupu Mārama (Light)",
+        welcome: "Nau mai ki Active Runner", instruction: "Tuhia tō ingoa ki konei.",
+        placeholder: "Tō Ingoa", continueBtn: "Haere Tonu",
+        hello: "Tēnā koe, ", streakTitle: "Rā Takiuru (Streak)",
+        playBtn: "Tīmata te Kāmera", playSub: "Kia rite ki te korikori!",
+        leaderboard: "Ngā Toa o te Kēmu", rank: "Tūranga", name: "Ingoa", score: "Kaute",
+        loadingAi: "E uta ana te Kāmera...", loadingSub: "Tukuna koa te kāmera kia kā.",
+        warningTitle: "Whakatūpato Haumaru", warning1: "Me tākaro ki tētahi wāhi wātea, maroke.",
+        warning2: "Kia tau te haere, puritia tētahi tūāpapa mehemea e tika ana.", warning3: "Kāti ināianei tonu mehemea ka pōrangi te māhunga, ka mamae rānei.",
+        warningBtn: "Kua mārama ahau", ready: "Kua reri?",
+        readySub: "Hoki whakamuri kia kitea te tinana. Tū mārie i waenganui.",
+        startCalBtn: "Tīmata", standStill: "Tū Mārie...", learning: "E ako ana i tō tūnga.",
+        gameOver: "Ka Rawe!", finalScore: "Kaute: ", returnDash: "Hoki ki te Pīhono",
+        hudScore1p: "Kaute", hudLives1p: "Oranga", hudActivity1p: "Mahi", hudSquats1p: "Piko", hudJumps1p: "Peke"
+    }
+};
+
+const elementsToTranslate = {
+    'txt-theme-dark': 'themeDark', 'txt-theme-light': 'themeLight',
+    'txt-welcome': 'welcome', 'txt-instruction': 'instruction',
+    'btn-continue': 'continueBtn', 'txt-hello': 'hello', 'txt-streak-title': 'streakTitle',
+    'txt-play-btn': 'playBtn', 'txt-play-sub': 'playSub', 'txt-leaderboard': 'leaderboard',
+    'txt-rank': 'rank', 'txt-name': 'name', 'txt-score': 'score',
+    'txt-loading-ai': 'loadingAi', 'txt-loading-sub': 'loadingSub',
+    'txt-warning-title': 'warningTitle', 'txt-warning-1': 'warning1',
+    'txt-warning-2': 'warning2', 'txt-warning-3': 'warning3', 'warning-continue-btn': 'warningBtn', 
+    'txt-ready': 'ready', 'txt-ready-sub': 'readySub', 'start-btn': 'startCalBtn',
+    'txt-stand-still': 'standStill', 'txt-learning': 'learning',
+    'txt-game-over': 'gameOver', 'txt-final-score': 'finalScore',
+    'restart-btn': 'returnDash',
+    'txt-hud-score-1p': 'hudScore1p', 'txt-hud-lives-1p': 'hudLives1p', 'txt-hud-activity-1p': 'hudActivity1p',
+    'txt-hud-squats-1p': 'hudSquats1p', 'txt-hud-jumps-1p': 'hudJumps1p'
+};
+
+function updateLanguage(lang) {
+    const dict = translations[lang];
+    for (const [id, key] of Object.entries(elementsToTranslate)) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = dict[key];
+    }
+    document.getElementById('player-name').placeholder = dict.placeholder;
+    if (!document.getElementById('dashboard-screen').classList.contains('hidden')) {
+        document.getElementById('txt-hello').textContent = dict.hello + currentPlayerName + "!";
+    }
+    localStorage.setItem('game_lang', lang);
+}
+
+function updateTheme(theme) {
+    const htmlEl = document.documentElement;
+    if (theme === 'dark') htmlEl.classList.add('dark');
+    else htmlEl.classList.remove('dark');
+    localStorage.setItem('game_theme', theme);
+    if(gameState === 'loading' || gameState === 'login' || gameState === 'dashboard') drawStaticBackground();
+}
+
+function calculateStreak() {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    let lastLogin = localStorage.getItem('last_login_date');
+    let currentStreak = parseInt(localStorage.getItem('current_streak')) || 0;
+
+    if (lastLogin !== todayStr) {
+        let yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (lastLogin === yesterday.toISOString().split('T')[0]) currentStreak += 1;
+        else currentStreak = 1;
+        localStorage.setItem('last_login_date', todayStr);
+        localStorage.setItem('current_streak', currentStreak);
+        // Reset bonus-claimed flag on new day login
+        localStorage.removeItem('streak_bonus_claimed_date');
+    }
+    document.getElementById('streak-number').textContent = currentStreak;
+
+    // Show streak bonus notice on dashboard if eligible
+    if (currentStreak >= 3) {
+        const claimedDate = localStorage.getItem('streak_bonus_claimed_date');
+        if (claimedDate !== todayStr) {
+            document.getElementById('streak-reward-notice').classList.remove('hidden');
+        }
+    }
+    return currentStreak;
+}
+
+function getLBKey() {
+    return speedMultiplier < 1 ? 'game_leaderboard_chill' : 'game_leaderboard_normal';
+}
+
+function getLeaderboard() {
+    const defaultBoard = [
+        { name: "WaikatoChamp", score: 850 }, { name: "Sarah123", score: 620 }, { name: "TeKauri", score: 430 }
+    ];
+    const stored = localStorage.getItem(getLBKey());
+    return stored ? JSON.parse(stored) : defaultBoard;
+}
+
+function saveScore(newScore) {
+    if (newScore <= 0) return;
+    let board = getLeaderboard();
+    board.push({ name: currentPlayerName, score: Math.floor(newScore) });
+    board.sort((a, b) => b.score - a.score);
+    board = board.slice(0, 5);
+    localStorage.setItem(getLBKey(), JSON.stringify(board));
+    renderLeaderboard();
+}
+
+function renderLeaderboard() {
+    const tbody = document.getElementById('leaderboard-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    // Show the tab that's selected, not the current game mode
+    const key = lbViewTab === 'chill' ? 'game_leaderboard_chill' : 'game_leaderboard_normal';
+    const defaultBoard = [
+        { name: "WaikatoChamp", score: 850 }, { name: "Sarah123", score: 620 }, { name: "TeKauri", score: 430 }
+    ];
+    const stored = localStorage.getItem(key);
+    const board = stored ? JSON.parse(stored) : defaultBoard;
+    board.forEach((player, index) => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-gray-200 dark:border-gray-700 last:border-0";
+        tr.innerHTML = `<td class="p-4 text-2xl">#${index + 1}</td>
+                        <td class="p-4 text-2xl font-black">${player.name}</td>
+                        <td class="p-4 text-2xl text-indigo-600 dark:text-indigo-400 font-bold">${player.score}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderGameOverLeaderboard() {
+    const tbody = document.getElementById('gameover-leaderboard-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    const key = goLBTab === 'chill' ? 'game_leaderboard_chill' : 'game_leaderboard_normal';
+    const defaultBoard = [
+        { name: "WaikatoChamp", score: 850 }, { name: "Sarah123", score: 620 }, { name: "TeKauri", score: 430 }
+    ];
+    const stored = localStorage.getItem(key);
+    const board = stored ? JSON.parse(stored) : defaultBoard;
+    board.forEach((player, index) => {
+        const isCurrentPlayer = (player.name === currentPlayerName || player.name === currentPlayer2Name);
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-gray-200 dark:border-gray-700 last:border-0" + (isCurrentPlayer ? " bg-green-50 dark:bg-green-900/30" : "");
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+        tr.innerHTML = `<td class="p-4 text-2xl">${medal}</td>
+                        <td class="p-4 text-2xl font-black ${isCurrentPlayer ? 'text-green-700 dark:text-green-400' : ''}">${player.name}${isCurrentPlayer ? ' ⬅' : ''}</td>
+                        <td class="p-4 text-2xl text-indigo-600 dark:text-indigo-400 font-bold">${player.score}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+// Orb collect notification
+let orbNotifyTimer = 0;
+function showOrbNotify(text, color) {
+    const el = document.getElementById('orb-notify');
+    const textEl = document.getElementById('orb-notify-text');
+    textEl.textContent = text;
+    textEl.style.background = color;
+    el.classList.remove('hidden');
+    orbNotifyTimer = 120;
+}
+
+/**
+ * CORE GAME STATE
+ */
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+let gameWidth = window.innerWidth, gameHeight = window.innerHeight;
+canvas.width = gameWidth; canvas.height = gameHeight;
+
+window.addEventListener('resize', () => {
+    gameWidth = window.innerWidth; gameHeight = window.innerHeight;
+    canvas.width = gameWidth; canvas.height = gameHeight;
+    if(gameState === 'login' || gameState === 'dashboard') drawStaticBackground();
+});
+
+let gameState = 'login'; 
+let score = 0, speed = 4, frameCount = 0, obstacles = [], gameLoopId;
+let speedMultiplier = 1; // 1 = Normal, 0.25 = Chill
+let levelUpTimer = 0, nextMilestone = 100;
+const CALIBRATION_REQUIRED_FRAMES = 60; 
+
+// ORB SYSTEM
+let orbs = []; // { lane, depth, type: 'shield'|'heart', active }
+let streakBonusGranted = false;
+
+// Player state includes shieldOrbs and shieldActive
+let players = [
+    { active: true, lives: 3, lane: 0, baseline: 0, calibrationFrames: 0, stats: { squats: 0, jumps: 0 }, actionCooldown: 0, isJumping: false, isSquatting: false, isResting: false, armsCrossedNow: false, restingMode: false, restCooldown: 0, invulnerableFrames: 0, shieldOrbs: 0, shieldActive: false, shieldTimer: 0, renderX: undefined, renderYOffset: 0, renderScaleX: 1, renderScaleY: 1, renderAngle: 0, renderArmL: undefined, renderArmR: undefined },
+    { active: false, lives: 3, lane: 0, baseline: 0, calibrationFrames: 0, stats: { squats: 0, jumps: 0 }, actionCooldown: 0, isJumping: false, isSquatting: false, isResting: false, armsCrossedNow: false, restingMode: false, restCooldown: 0, invulnerableFrames: 0, shieldOrbs: 0, shieldActive: false, shieldTimer: 0, renderX: undefined, renderYOffset: 0, renderScaleX: 1, renderScaleY: 1, renderAngle: 0, renderArmL: undefined, renderArmR: undefined }
+];
+
+const bgMusic = document.getElementById('bg-music');
+bgMusic.volume = 0.4;
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSynth(type) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const now = audioCtx.currentTime;
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.connect(g).connect(audioCtx.destination);
+    g.gain.value = 0.15; let duration = 0.18;
+    if (type === 'lane') { o.type = 'sine'; o.frequency.setValueAtTime(660, now); o.frequency.linearRampToValueAtTime(880, now + duration); } 
+    else if (type === 'jump') { o.type = 'triangle'; o.frequency.setValueAtTime(440, now); o.frequency.linearRampToValueAtTime(1320, now + 0.22); duration = 0.22; } 
+    else if (type === 'squat') { o.type = 'triangle'; o.frequency.setValueAtTime(660, now); o.frequency.linearRampToValueAtTime(220, now + 0.22); duration = 0.22; } 
+    else if (type === 'hit') { o.type = 'sawtooth'; o.frequency.setValueAtTime(110, now); o.frequency.linearRampToValueAtTime(55, now + 0.18); g.gain.setValueAtTime(0.2, now); g.gain.linearRampToValueAtTime(0, now + 0.18); } 
+    else if (type === 'levelup') { o.type = 'square'; o.frequency.setValueAtTime(880, now); o.frequency.linearRampToValueAtTime(1760, now + 0.25); duration = 0.25; }
+    else if (type === 'orb') { o.type = 'sine'; o.frequency.setValueAtTime(880, now); o.frequency.linearRampToValueAtTime(1320, now + 0.15); g.gain.setValueAtTime(0.2, now); g.gain.linearRampToValueAtTime(0, now + 0.2); duration = 0.2; }
+    else if (type === 'heart') { o.type = 'sine'; o.frequency.setValueAtTime(660, now); o.frequency.linearRampToValueAtTime(990, now + 0.1); o.frequency.linearRampToValueAtTime(1320, now + 0.2); g.gain.setValueAtTime(0.2, now); g.gain.linearRampToValueAtTime(0, now + 0.25); duration = 0.25; }
+    else if (type === 'shield') { o.type = 'triangle'; o.frequency.setValueAtTime(440, now); o.frequency.linearRampToValueAtTime(880, now + 0.15); o.frequency.linearRampToValueAtTime(1760, now + 0.3); g.gain.setValueAtTime(0.25, now); g.gain.linearRampToValueAtTime(0, now + 0.4); duration = 0.4; }
+    o.start(now); o.stop(now + duration);
+    o.onended = () => { o.disconnect(); g.disconnect(); };
+}
+
+/**
+ * AI / MEDIAPIPE
+ */
+const videoElement = document.getElementById('webcam-video');
+let poseLandmarker = null;
+let lastVideoTime = -1;
+let visionModule = null;
+
+async function initCameraSequence() {
+    if (!poseLandmarker) {
+        try {
+            try {
+                visionModule = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm");
+            } catch (e) {
+                visionModule = await import("https://cdn.skypack.dev/@mediapipe/tasks-vision@0.10.3");
+            }
+            const visionTask = await visionModule.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
+            poseLandmarker = await visionModule.PoseLandmarker.createFromOptions(visionTask, {
+                baseOptions: {
+                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+                    delegate: "GPU"
+                },
+                runningMode: "VIDEO",
+                numPoses: 2
+            });
+        } catch(e) { 
+            console.error("AI Load Error:", e);
+            alert("Failed to load AI engine. Please check your internet connection.");
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            return;
+        }
+    }
+
+    if (!isCameraInitialized) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+            videoElement.srcObject = stream;
+            videoElement.addEventListener("loadeddata", predictWebcam);
+            isCameraInitialized = true;
+        } catch (err) {
+            alert("Camera access is required. Please check your browser permissions.");
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            return;
+        }
+    }
+    
+    document.getElementById('loading-screen').classList.add('hidden');
+    document.getElementById('warning-screen').classList.remove('hidden');
+    videoElement.classList.remove('hidden'); // keep source hidden, mirrors handle display
+}
+
+// Camera mirror canvases
+const camSingle = document.getElementById('cam-single');
+const camLeft   = document.getElementById('cam-left');
+const camRight  = document.getElementById('cam-right');
+const ctxCamSingle = camSingle.getContext('2d');
+const ctxCamLeft   = camLeft.getContext('2d');
+const ctxCamRight  = camRight.getContext('2d');
+
+function drawCameraFeeds() {
+    if (!isCameraInitialized || videoElement.readyState < 2) return;
+    const vw = videoElement.videoWidth || 640;
+    const vh = videoElement.videoHeight || 480;
+
+    if (numPlayers === 1) {
+        // Draw raw — CSS scaleX(-1) mirrors it for the user
+        ctxCamSingle.drawImage(videoElement, 0, 0, camSingle.width, camSingle.height);
+    } else {
+        // P1 — LEFT half of raw video — draw mirrored so player sees themselves naturally
+        ctxCamLeft.save();
+        ctxCamLeft.translate(camLeft.width, 0);
+        ctxCamLeft.scale(-1, 1);
+        ctxCamLeft.drawImage(videoElement, 0, 0, vw / 2, vh, 0, 0, camLeft.width, camLeft.height);
+        ctxCamLeft.restore();
+        // P2 — RIGHT half of raw video — draw mirrored
+        ctxCamRight.save();
+        ctxCamRight.translate(camRight.width, 0);
+        ctxCamRight.scale(-1, 1);
+        ctxCamRight.drawImage(videoElement, vw / 2, 0, vw / 2, vh, 0, 0, camRight.width, camRight.height);
+        ctxCamRight.restore();
+    }
+}
+
+function showCameraForMode() {
+    if (numPlayers === 1) {
+        camSingle.classList.remove('hidden');
+        document.getElementById('split-cam-container').style.display = 'none';
+    } else {
+        camSingle.classList.add('hidden');
+        document.getElementById('split-cam-container').style.display = 'flex';
+    }
+}
+
+function predictWebcam() {
+    if (gameState === 'playing' || gameState === 'calibrating') {
+        let startTimeMs = performance.now();
+        if (lastVideoTime !== videoElement.currentTime && poseLandmarker) {
+            lastVideoTime = videoElement.currentTime;
+            const results = poseLandmarker.detectForVideo(videoElement, startTimeMs);
+            onPoseResults(results);
+        }
+    }
+    // Always draw camera feed whenever camera is active
+    drawCameraFeeds();
+    if (isCameraInitialized) requestAnimationFrame(predictWebcam);
+}
+
+function onPoseResults(results) {
+    if (!results.landmarks || results.landmarks.length === 0) return;
+    // Sort descending by X — higher X in raw video = left side of room = P1 (left board)
+    // lower X in raw video = right side of room = P2 (right board)
+    let poses = [...results.landmarks];
+    poses.sort((a, b) => a[0].x - b[0].x);
+
+    if (gameState === 'calibrating') {
+        if (poses.length < numPlayers) {
+            document.getElementById('txt-learning').innerText = `Waiting for ${numPlayers} player(s) to be in frame...`;
+            return;
+        }
+        document.getElementById('txt-learning').innerText = "Learning your neutral pose...";
+        let validFrames = 0;
+        for (let i = 0; i < numPlayers; i++) {
+            let avgShoulderY = (poses[i][11].y + poses[i][12].y) / 2;
+            players[i].baseline += avgShoulderY;
+            players[i].calibrationFrames++;
+            validFrames = players[i].calibrationFrames;
+        }
+        document.getElementById('calibration-bar').style.width = `${(validFrames/CALIBRATION_REQUIRED_FRAMES)*100}%`;
+        if (validFrames >= CALIBRATION_REQUIRED_FRAMES) {
+            for (let i = 0; i < numPlayers; i++) players[i].baseline /= CALIBRATION_REQUIRED_FRAMES;
+            startGameplay();
+        }
+    } else if (gameState === 'playing') {
+        for (let i = 0; i < numPlayers; i++) {
+            if (poses[i] && players[i].lives > 0) handlePlayerMovement(players[i], poses[i]);
+        }
+    }
+}
+
+// Detect arms crossed (resting posture) for shield activation
+function detectArmsCrossed(landmarks) {
+    const leftWrist    = landmarks[15];
+    const rightWrist   = landmarks[16];
+    const leftShoulder = landmarks[11];
+    const rightShoulder= landmarks[12];
+    const leftElbow    = landmarks[13];
+    const rightElbow   = landmarks[14];
+
+    const centerX  = (leftShoulder.x + rightShoulder.x) / 2;
+    const shoulderY= (leftShoulder.y + rightShoulder.y) / 2;
+
+    // Because camera is mirrored for display, landmark X is from raw video
+    // Left wrist crossing over = leftWrist.x < centerX (moves toward right in raw)
+    // Right wrist crossing over = rightWrist.x > centerX
+    // Also both wrists should be near chest height (below shoulders by some margin)
+    const wristsCrossed = leftWrist.x < centerX && rightWrist.x > centerX;
+    const wristsAtChest = leftWrist.y < shoulderY + 0.35 && rightWrist.y < shoulderY + 0.35;
+    const elbowsRaised  = leftElbow.y < shoulderY + 0.2 && rightElbow.y < shoulderY + 0.2;
+
+    return wristsCrossed && wristsAtChest && elbowsRaised;
+}
+
+function handlePlayerMovement(player, landmarks) {
+    if (player.actionCooldown > 0) player.actionCooldown--;
+    if (player.restCooldown > 0) player.restCooldown--;
+
+    const squatThreshold = 0.10, armLevelThreshold = 0.15, armsUpThreshold = -0.15;
+    
+    let wasSquatting = player.isSquatting, wasJumping = player.isJumping;
+    let wasResting = player.isResting;
+    player.isSquatting = false; player.isJumping = false; player.isResting = false;
+
+    const leftShoulder = landmarks[11], rightShoulder = landmarks[12];
+    const leftWrist = landmarks[15], rightWrist = landmarks[16];
+    const shoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+
+    const leftArmRaised = leftWrist.y < leftShoulder.y + armLevelThreshold;
+    const rightArmRaised = rightWrist.y < rightShoulder.y + armLevelThreshold;
+    const bothArmsUp = leftWrist.y < leftShoulder.y + armsUpThreshold && rightWrist.y < rightShoulder.y + armsUpThreshold;
+    const bothArmsLevel = leftArmRaised && rightArmRaised && !bothArmsUp;
+
+    // Check arms crossed (resting posture)
+    const armsCrossed = detectArmsCrossed(landmarks);
+    player.armsCrossedNow = armsCrossed;
+    player.restingMode = armsCrossed; // persistent flag for orb collision
+
+    if (armsCrossed) {
+        player.isResting = true;
+        if (player.shieldOrbs > 0 && !player.shieldActive) {
+            player.shieldActive = true;
+            player.shieldTimer  = 1800;
+            player.shieldOrbs--;
+            updateHUD();
+            playSynth('shield');
+        }
+        return;
+    } else {
+        player.isResting = false;
+    }
+
+    if (bothArmsUp) {
+        player.isJumping = true;
+        if (!wasJumping) { player.stats.jumps++; updateHUD(); playSynth('jump'); }
+    } else if (bothArmsLevel || shoulderY > player.baseline + squatThreshold) {
+        player.isSquatting = true;
+        if (!wasSquatting) { player.stats.squats++; updateHUD(); playSynth('squat'); }
+    }
+
+    if (player.actionCooldown === 0 && !player.isSquatting && !player.isJumping) {
+        if (leftArmRaised && !rightArmRaised) {
+            if (player.lane > -1) { player.lane--; player.actionCooldown = 20; playSynth('lane'); }
+        } else if (rightArmRaised && !leftArmRaised) {
+            if (player.lane < 1) { player.lane++; player.actionCooldown = 20; playSynth('lane'); }
+        }
+    }
+}
+
+/**
+ * UI EVENT LISTENERS
+ */
+document.getElementById('lang-select').addEventListener('change', (e) => updateLanguage(e.target.value));
+document.getElementById('theme-select').addEventListener('change', (e) => updateTheme(e.target.value));
+
+document.getElementById('btn-mode-1p').addEventListener('click', () => {
+    numPlayers = 1; players[1].active = false;
+    document.getElementById('p2-name-input-wrap').classList.add('hidden');
+    document.getElementById('btn-mode-1p').classList.replace('border-transparent', 'border-indigo-400');
+    document.getElementById('btn-mode-1p').classList.replace('bg-gray-200', 'bg-indigo-600');
+    document.getElementById('btn-mode-1p').classList.replace('text-gray-800', 'text-white');
+    document.getElementById('btn-mode-2p').classList.replace('border-indigo-400', 'border-transparent');
+    document.getElementById('btn-mode-2p').classList.replace('bg-indigo-600', 'bg-gray-200');
+    document.getElementById('btn-mode-2p').classList.replace('text-white', 'text-gray-800');
+    // Show speed buttons, reset to Normal
+    speedMultiplier = 1;
+    document.getElementById('btn-speed-normal').className = 'flex-1 bg-green-600 text-white font-bold py-3 rounded-xl border-4 border-green-400 transform transition text-xl';
+    document.getElementById('btn-speed-chill').className = 'flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-3 rounded-xl border-4 border-transparent transform transition text-xl';
+});
+
+document.getElementById('btn-mode-2p').addEventListener('click', () => {
+    numPlayers = 2; players[1].active = true;
+    document.getElementById('p2-name-input-wrap').classList.remove('hidden');
+    document.getElementById('player2-name').focus();
+    document.getElementById('btn-mode-2p').classList.replace('border-transparent', 'border-indigo-400');
+    document.getElementById('btn-mode-2p').classList.replace('bg-gray-200', 'bg-indigo-600');
+    document.getElementById('btn-mode-2p').classList.replace('text-gray-800', 'text-white');
+    document.getElementById('btn-mode-1p').classList.replace('border-indigo-400', 'border-transparent');
+    document.getElementById('btn-mode-1p').classList.replace('bg-indigo-600', 'bg-gray-200');
+    document.getElementById('btn-mode-1p').classList.replace('text-white', 'text-gray-800');
+    // Show speed buttons, reset to Normal
+    speedMultiplier = 1;
+    document.getElementById('btn-speed-normal').className = 'flex-1 bg-green-600 text-white font-bold py-3 rounded-xl border-4 border-green-400 transform transition text-xl';
+    document.getElementById('btn-speed-chill').className = 'flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-3 rounded-xl border-4 border-transparent transform transition text-xl';
+});
+
+document.getElementById('btn-speed-normal').addEventListener('click', () => {
+    speedMultiplier = 1;
+    document.getElementById('btn-speed-normal').className = 'flex-1 bg-green-600 text-white font-bold py-3 rounded-xl border-4 border-green-400 transform transition text-xl';
+    document.getElementById('btn-speed-chill').className = 'flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-3 rounded-xl border-4 border-transparent transform transition text-xl';
+    if (document.getElementById('lb-mode-label')) document.getElementById('lb-mode-label').innerText = 'Normal';
+    renderLeaderboard();
+});
+
+document.getElementById('btn-speed-chill').addEventListener('click', () => {
+    speedMultiplier = 0.4;
+    document.getElementById('btn-speed-chill').className = 'flex-1 bg-cyan-600 text-white font-bold py-3 rounded-xl border-4 border-cyan-400 transform transition text-xl';
+    document.getElementById('btn-speed-normal').className = 'flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-3 rounded-xl border-4 border-transparent transform transition text-xl';
+    if (document.getElementById('lb-mode-label')) document.getElementById('lb-mode-label').innerText = 'Chill';
+    renderLeaderboard();
+});
+
+document.getElementById('btn-continue').addEventListener('click', () => {
+    const name = document.getElementById('player-name').value.trim();
+    if (!name) {
+        const lang = document.getElementById('lang-select').value;
+        alert(lang === 'mi' ? 'Kuhuna tō ingoa koa.' : 'Please enter your name.');
+        return;
+    }
+    currentPlayerName = name;
+    localStorage.setItem('player_name', name);
+
+    // Calculate streak first
+    const streak = calculateStreak();
+
+    // Build streak screen
+    document.getElementById('streak-big-number').textContent = streak;
+
+    // Message
+    const msgs = { 1:'Day 1 — great start! Come back tomorrow.', 2:'Day 2 — you\'re on a roll! One more day for your first milestone.', 3:'🎉 3 Days in a Row!' };
+    document.getElementById('streak-big-msg').textContent = msgs[streak] || (streak >= 3 ? `🎉 ${streak} Days in a Row!` : `Day ${streak} — keep going!`);
+
+    // Dots: colour based on streak
+    const dot2 = document.getElementById('dot-2ago');
+    const dotY = document.getElementById('dot-yesterday');
+    if (streak >= 3) {
+        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-yellow-400 bg-yellow-400/20 text-white'; dot2.textContent = '✓';
+        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-yellow-400 bg-yellow-400/20 text-white'; dotY.textContent = '✓';
+    } else if (streak >= 2) {
+        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dot2.textContent = '○';
+        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-yellow-400 bg-yellow-400/20 text-white'; dotY.textContent = '✓';
+    } else {
+        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dot2.textContent = '○';
+        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dotY.textContent = '○';
+    }
+
+    // Show streak screen
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('streak-screen').classList.remove('hidden');
+    gameState = 'dashboard';
+});
+
+document.getElementById('btn-streak-next').addEventListener('click', () => {
+    document.getElementById('streak-screen').classList.add('hidden');
+    document.getElementById('dashboard-screen').classList.remove('hidden');
+    updateLanguage(document.getElementById('lang-select').value);
+    renderLeaderboard();
+});
+
+document.getElementById('btn-play').addEventListener('click', () => {
+    // Read P2 name if in 2P mode
+    if (numPlayers === 2) {
+        const p2name = document.getElementById('player2-name').value.trim();
+        if (!p2name) {
+            alert('Please enter Player 2\'s name.');
+            document.getElementById('player2-name').focus();
+            return;
+        }
+        currentPlayer2Name = p2name;
+        localStorage.setItem('player2_name', p2name);
+    }
+    document.getElementById('dashboard-screen').classList.add('hidden');
+    document.getElementById('loading-screen').classList.remove('hidden');
+    gameState = 'loading';
+    initCameraSequence();
+});
+
+document.getElementById('warning-continue-btn').addEventListener('click', () => {
+    document.getElementById('warning-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
+});
+
+document.getElementById('start-btn').addEventListener('click', () => {
+    audioCtx.resume();
+    bgMusic.play().then(() => { bgMusic.pause(); bgMusic.currentTime = 0; }).catch(e => console.log(e));
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('calibration-screen').classList.remove('hidden');
+    gameState = 'calibrating';
+    for (let i=0; i<numPlayers; i++) { players[i].baseline = 0; players[i].calibrationFrames = 0; }
+    document.getElementById('calibration-bar').style.width = '0%';
+});
+
+// Toggle leaderboard on game over screen
+let goLBTab = 'normal';
+
+function switchGOLBTab(tab) {
+    goLBTab = tab;
+    if (tab === 'normal') {
+        document.getElementById('go-lb-tab-normal').className = 'flex-1 bg-green-600 text-white font-bold py-2 rounded-xl border-2 border-green-400 text-lg';
+        document.getElementById('go-lb-tab-chill').className  = 'flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-2 rounded-xl border-2 border-transparent text-lg';
+    } else {
+        document.getElementById('go-lb-tab-chill').className  = 'flex-1 bg-cyan-600 text-white font-bold py-2 rounded-xl border-2 border-cyan-400 text-lg';
+        document.getElementById('go-lb-tab-normal').className = 'flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-2 rounded-xl border-2 border-transparent text-lg';
+    }
+    renderGameOverLeaderboard();
+}
+
+function toggleGameoverLB() {
+    const wrap = document.getElementById('gameover-lb-wrap');
+    const btn  = document.getElementById('btn-gameover-lb');
+    if (wrap.classList.contains('hidden')) {
+        wrap.classList.remove('hidden');
+        btn.textContent = '✕ Hide';
+        // Default tab to match current game mode
+        goLBTab = speedMultiplier < 1 ? 'chill' : 'normal';
+        switchGOLBTab(goLBTab);
+    } else {
+        wrap.classList.add('hidden');
+        btn.textContent = '🏆 Leaderboard';
+    }
+}
+
+// Toggle leaderboard visibility on dashboard
+let lbViewTab = 'normal';
+
+function switchLBTab(tab) {
+    lbViewTab = tab;
+    if (tab === 'normal') {
+        document.getElementById('lb-tab-normal').className = 'flex-1 bg-green-600 text-white font-bold py-2 rounded-xl border-2 border-green-400 text-lg';
+        document.getElementById('lb-tab-chill').className  = 'flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-2 rounded-xl border-2 border-transparent text-lg';
+    } else {
+        document.getElementById('lb-tab-chill').className  = 'flex-1 bg-cyan-600 text-white font-bold py-2 rounded-xl border-2 border-cyan-400 text-lg';
+        document.getElementById('lb-tab-normal').className = 'flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-2 rounded-xl border-2 border-transparent text-lg';
+    }
+    renderLeaderboard();
+}
+
+function toggleLeaderboard() {
+    const wrap = document.getElementById('leaderboard-table-wrap');
+    const btn  = document.getElementById('btn-toggle-lb');
+    if (wrap.style.display === 'none' || !wrap.style.display) {
+        wrap.style.display = 'block';
+        btn.textContent = '✕ Hide';
+        renderLeaderboard();
+    } else {
+        wrap.style.display = 'none';
+        btn.textContent = '🏆 Leaderboard';
+    }
+}
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('dashboard-screen').classList.remove('hidden');
+    document.getElementById('shield-active-hud').classList.add('hidden');
+    videoElement.classList.add('hidden');
+    camSingle.classList.add('hidden');
+    document.getElementById('split-cam-container').style.display = 'none';
+    // Reset leaderboard toggle to hidden on return
+    document.getElementById('leaderboard-table-wrap').classList.add('hidden');
+    document.getElementById('btn-toggle-lb').textContent = '🏆 Leaderboard';
+    document.getElementById('gameover-lb-wrap').classList.add('hidden');
+    document.getElementById('btn-gameover-lb').textContent = '🏆 Leaderboard';
+    if (document.getElementById('winner-banner')) document.getElementById('winner-banner').classList.add('hidden');
+    if (document.getElementById('final-p2-score-container')) document.getElementById('final-p2-score-container').classList.add('hidden');
+    gameState = 'dashboard';
+    drawStaticBackground();
+    renderLeaderboard();
+});
+
+/**
+ * GAME ENGINE & RENDERING
+ */
+const horizonY = gameHeight * 0.3;
+
+function getScreenPos(laneIdx, depth, canvasW) {
+    const laneWidthBottom = canvasW / 3;
+    const laneWidthTop = canvasW / 8;
+    const currentY = horizonY + (gameHeight - horizonY) * depth;
+    const totalWidthAtDepth = laneWidthTop + (laneWidthBottom * 3 - laneWidthTop) * depth;
+    const laneW = totalWidthAtDepth / 3;
+    const centerX = canvasW / 2;
+    return { x: centerX + (laneIdx * laneW), y: currentY, w: laneW * 0.8 };
+}
+
+function drawBackground(canvasW) {
+    const isDark = document.documentElement.classList.contains('dark');
+    ctx.fillStyle = isDark ? '#0f172a' : '#bae6fd'; ctx.fillRect(0, 0, canvasW, horizonY);
+    ctx.fillStyle = isDark ? '#1e293b' : '#bbf7d0'; ctx.fillRect(0, horizonY, canvasW, gameHeight - horizonY);
+    ctx.strokeStyle = isDark ? '#334155' : '#ffffff'; ctx.lineWidth = 6;
+    
+    const pFarLeft = getScreenPos(-1.5, 0, canvasW), pFarRight = getScreenPos(1.5, 0, canvasW);
+    const pNearLeft = getScreenPos(-1.5, 1, canvasW), pNearRight = getScreenPos(1.5, 1, canvasW);
+    const pFarL1 = getScreenPos(-0.5, 0, canvasW), pNearL1 = getScreenPos(-0.5, 1, canvasW);
+    const pFarR1 = getScreenPos(0.5, 0, canvasW), pNearR1 = getScreenPos(0.5, 1, canvasW);
+
+    ctx.beginPath();
+    ctx.moveTo(pNearLeft.x, pNearLeft.y); ctx.lineTo(pFarLeft.x, pFarLeft.y);
+    ctx.moveTo(pNearL1.x, pNearL1.y); ctx.lineTo(pFarL1.x, pFarL1.y);
+    ctx.moveTo(pNearR1.x, pNearR1.y); ctx.lineTo(pFarR1.x, pFarR1.y);
+    ctx.moveTo(pNearRight.x, pNearRight.y); ctx.lineTo(pFarRight.x, pFarRight.y);
+    ctx.stroke();
+}
+
+function drawStaticBackground() {
+    ctx.clearRect(0, 0, gameWidth, gameHeight);
+    drawBackground(gameWidth);
+}
+
+// ---- ORB SPAWNING ----
+function spawnOrb() {
+    // Spawn a random orb: 70% shield, 30% heart
+    const type = Math.random() < 0.5 ? 'shield' : 'heart';
+    const lane = [-1, 0, 1][Math.floor(Math.random() * 3)];
+    orbs.push({ lane, depth: 0, type, active: true, bobOffset: Math.random() * Math.PI * 2 });
+}
+
+// ---- ORB DRAWING ----
+function drawOrb(orb, subW) {
+    const oPos = getScreenPos(orb.lane, orb.depth, subW);
+    const scale = 0.2 + (orb.depth * 0.8);
+    const radius = 42 * scale;   // was 22 — now much bigger
+    const bobY = Math.sin(frameCount * 0.08 + orb.bobOffset) * 10 * scale;
+    const pulse = 1 + Math.sin(frameCount * 0.12 + orb.bobOffset) * 0.12; // gentle pulse
+
+    ctx.save();
+    ctx.shadowBlur = 45 * scale;  // stronger glow
+
+    if (orb.type === 'shield') {
+        ctx.shadowColor = '#06b6d4';
+
+        // Outer pulse ring
+        ctx.beginPath();
+        ctx.arc(oPos.x, oPos.y + bobY, radius * 1.5 * pulse, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(6,182,212,0.25)';
+        ctx.lineWidth = 5 * scale;
+        ctx.stroke();
+
+        // Main orb
+        const grad = ctx.createRadialGradient(oPos.x, oPos.y + bobY - radius * 0.3, radius * 0.1, oPos.x, oPos.y + bobY, radius);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.4, '#67e8f9');
+        grad.addColorStop(1, '#0891b2');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(oPos.x, oPos.y + bobY, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Shield icon — much larger
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowBlur = 0;
+        ctx.font = `bold ${Math.floor(radius * 1.3)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🛡️', oPos.x, oPos.y + bobY);
+
+    } else {
+        ctx.shadowColor = '#ec4899';
+
+        // Outer pulse ring
+        ctx.beginPath();
+        ctx.arc(oPos.x, oPos.y + bobY, radius * 1.5 * pulse, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(236,72,153,0.25)';
+        ctx.lineWidth = 5 * scale;
+        ctx.stroke();
+
+        // Main orb
+        const grad = ctx.createRadialGradient(oPos.x, oPos.y + bobY - radius * 0.3, radius * 0.1, oPos.x, oPos.y + bobY, radius);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.4, '#f9a8d4');
+        grad.addColorStop(1, '#be185d');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(oPos.x, oPos.y + bobY, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Heart icon — much larger
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowBlur = 0;
+        ctx.font = `bold ${Math.floor(radius * 1.3)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('💗', oPos.x, oPos.y + bobY);
+    }
+    ctx.restore();
+}
+
+// ---- OBSTACLE SPAWNING ----
+function spawnObstacle() {
+    let availableTypes = ['high', 'low', 'block'];
+    if (score > 100) availableTypes.push('low-wide');
+    if (score > 200) availableTypes.push('door');
+    
+    const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+    let lane = [-1, 0, 1][Math.floor(Math.random() * 3)];
+    let span = 1;
+
+    if (type === 'low-wide') { lane = 0; span = 3; } 
+    else if (type === 'door') {
+        span = Math.floor(Math.random() * 3) + 1;
+        if (span === 3) { lane = 0; } 
+        else if (span === 2) { lane = Math.random() < 0.5 ? -0.5 : 0.5; } 
+    }
+    obstacles.push({ lane, span, depth: 0, type, active: true });
+}
+
+function updateHUD() {
+    if (numPlayers === 1) {
+        document.getElementById('score-display-1p').innerText = Math.floor(score);
+        document.getElementById('lives-display-1p').innerText = players[0].lives;
+        document.getElementById('squats-display-1p').innerText = players[0].stats.squats;
+        document.getElementById('jumps-display-1p').innerText = players[0].stats.jumps;
+        document.getElementById('shield-display-1p').innerText = players[0].shieldOrbs;
+        let calories = (score * 0.02) + (players[0].stats.squats * 0.5) + (players[0].stats.jumps * 0.8);
+        document.getElementById('calories-display-1p').innerText = calories.toFixed(1);
+    } else {
+        // Both players share same score (co-op style)
+        document.getElementById('score-display-2p').innerText = Math.floor(score);
+        document.getElementById('score-display-2p-p2').innerText = Math.floor(score);
+        // P1 (left board = hud-p2 elements) — person standing LEFT side of room
+        document.getElementById('p2-lives-display').innerText = players[0].lives;
+        document.getElementById('p2-squats').innerText = players[0].stats.squats;
+        document.getElementById('p2-jumps').innerText = players[0].stats.jumps;
+        document.getElementById('p2-shields').innerText = players[0].shieldOrbs;
+        document.getElementById('score-display-2p-p2').innerText = Math.floor(players[0].score || score);
+        let cal1 = (score * 0.01) + (players[0].stats.squats * 0.5) + (players[0].stats.jumps * 0.8);
+        document.getElementById('p2-calories').innerText = cal1.toFixed(1);
+        // P2 (right board = hud-p1 elements) — person standing RIGHT side of room
+        document.getElementById('p1-lives-display').innerText = players[1].lives;
+        document.getElementById('p1-squats').innerText = players[1].stats.squats;
+        document.getElementById('p1-jumps').innerText = players[1].stats.jumps;
+        document.getElementById('p1-shields').innerText = players[1].shieldOrbs;
+        document.getElementById('score-display-2p').innerText = Math.floor(players[1].score || score);
+        let cal2 = (score * 0.01) + (players[1].stats.squats * 0.5) + (players[1].stats.jumps * 0.8);
+        document.getElementById('p1-calories').innerText = cal2.toFixed(1);
+    }
+}
+
+function startGameplay() {
+    document.getElementById('calibration-screen').classList.add('hidden');
+    document.getElementById('shield-active-hud').classList.add('hidden');
+    
+    if (numPlayers === 1) {
+        document.getElementById('hud-1p').classList.remove('hidden');
+        document.getElementById('hud-2p').classList.add('hidden');
+        document.getElementById('p1-hud-name-1p').innerText = currentPlayerName;
+    } else {
+        document.getElementById('hud-1p').classList.add('hidden');
+        document.getElementById('hud-2p').classList.remove('hidden');
+        document.getElementById('hud-p2').classList.remove('hidden');
+        // p2-hud-name = LEFT board = players[0] = person entered first (P1 name)
+        // p1-hud-name = RIGHT board = players[1] = person entered second (P2 name)
+        document.getElementById('p2-hud-name').innerText = currentPlayerName;
+        document.getElementById('p1-hud-name').innerText = currentPlayer2Name;
+    }
+    
+    gameState = 'playing'; score = 0; speed = 4; frameCount = 0; obstacles = []; orbs = [];
+    levelUpTimer = 0; nextMilestone = 100; streakBonusGranted = false;
+    
+    for (let i=0; i<numPlayers; i++) {
+        players[i].lives = 3; players[i].lane = 0; players[i].stats = {squats: 0, jumps: 0}; players[i].score = 0;
+        players[i].invulnerableFrames = 0; players[i].actionCooldown = 0;
+        players[i].shieldOrbs = 0; players[i].shieldActive = false; players[i].shieldTimer = 0;
+        players[i].isResting = false; players[i].armsCrossedNow = false; players[i].restingMode = false; players[i].restCooldown = 0; players[i].eliminated = false;
+        players[i].renderX = undefined; 
+        players[i].renderYOffset = 0; players[i].renderScaleX = 1; players[i].renderScaleY = 1;
+        players[i].renderAngle = 0; players[i].renderArmL = undefined; players[i].renderArmR = undefined;
+    }
+
+    // --- 3-DAY STREAK BONUS: give 5 shield orbs at start (once per day) ---
+    const streak = parseInt(localStorage.getItem('current_streak')) || 0;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const claimedDate = localStorage.getItem('streak_bonus_claimed_date');
+    if (streak >= 3 && claimedDate !== todayStr) {
+        for (let i=0; i<numPlayers; i++) players[i].shieldOrbs = 5;
+        localStorage.setItem('streak_bonus_claimed_date', todayStr);
+        // Force CSS animation to replay by cloning the banner
+        const banner = document.getElementById('streak-bonus-banner');
+        banner.classList.remove('hidden');
+        // Reset animation
+        banner.style.animation = 'none';
+        banner.offsetHeight; // reflow
+        banner.style.animation = '';
+        setTimeout(() => banner.classList.add('hidden'), 4000);
+        streakBonusGranted = true;
+        // Hide the dashboard notice since bonus is now claimed
+        document.getElementById('streak-reward-notice').classList.add('hidden');
+    }
+    
+    updateHUD();
+    showCameraForMode();
+    bgMusic.currentTime = 0; bgMusic.play().catch(e => console.log(e));
+    if(gameLoopId) cancelAnimationFrame(gameLoopId);
+    gameLoop();
+}
+
+function gameOver() {
+    gameState = 'gameover';
+    bgMusic.pause(); playSynth('hit');
+    saveScore(score);
+    renderGameOverLeaderboard();
+    document.getElementById('shield-active-hud').classList.add('hidden');
+    document.getElementById('hud-1p').classList.add('hidden');
+    document.getElementById('hud-2p').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.remove('hidden');
+
+    if (numPlayers === 2) {
+        // Hide score row — only show winner banner + stats
+        document.getElementById('score-row').style.display = 'none';
+        document.getElementById('final-p2-container').classList.remove('hidden');
+
+        // players[0] = LEFT board = currentPlayerName (entered first)
+        // players[1] = RIGHT board = currentPlayer2Name (entered second)
+        // Stats cards: final-p1-name = LEFT, final-p2-name = RIGHT
+        document.getElementById('final-p1-stats-name').innerText = currentPlayerName;
+        document.getElementById('final-p2-stats-name').innerText = currentPlayer2Name;
+        document.getElementById('final-p1-squats').innerText = players[0].stats.squats;
+        document.getElementById('final-p1-jumps').innerText = players[0].stats.jumps;
+        document.getElementById('final-p2-squats').innerText = players[1].stats.squats;
+        document.getElementById('final-p2-jumps').innerText = players[1].stats.jumps;
+
+        // Winner = whoever still has lives (survivor wins)
+        let winnerName, winnerScore;
+        if (players[0].lives <= 0 && players[1].lives > 0) {
+            winnerName  = currentPlayer2Name;
+            winnerScore = Math.floor(players[1].score || 0);
+        } else if (players[1].lives <= 0 && players[0].lives > 0) {
+            winnerName  = currentPlayerName;
+            winnerScore = Math.floor(players[0].score || 0);
+        } else {
+            // Both died simultaneously — higher score wins
+            const p0 = Math.floor(players[0].score || 0);
+            const p1 = Math.floor(players[1].score || 0);
+            winnerName  = p0 >= p1 ? currentPlayerName : currentPlayer2Name;
+            winnerScore = Math.max(p0, p1);
+        }
+
+        document.getElementById('winner-banner').classList.remove('hidden');
+        document.getElementById('winner-name').innerText  = winnerName;
+        document.getElementById('winner-score').innerText = winnerScore;
+    } else {
+        // Single player
+        document.getElementById('final-p1-stats-name').innerText = currentPlayerName;
+        document.getElementById('score-row').style.display = '';
+        document.getElementById('final-score').innerText = Math.floor(score);
+        document.getElementById('final-p1-squats').innerText = players[0].stats.squats;
+        document.getElementById('final-p1-jumps').innerText = players[0].stats.jumps;
+        document.getElementById('final-p2-container').classList.add('hidden');
+        document.getElementById('winner-banner').classList.add('hidden');
+    }
+}
+
+function drawObstacle(obs, subW) {
+    const oPos = getScreenPos(obs.lane, obs.depth, subW);
+    const scale = 0.2 + (obs.depth * 0.8); 
+    const totalW = oPos.w * obs.span * scale;
+    
+    ctx.save();
+    if (obs.type === 'high') {
+        ctx.fillStyle = '#f59e0b'; ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 15;
+        ctx.fillRect(oPos.x - (totalW/2), oPos.y - (100*scale), totalW, 40*scale);
+    } else if (obs.type === 'low' || obs.type === 'low-wide') {
+        ctx.fillStyle = obs.type === 'low-wide' ? '#dc2626' : '#ef4444'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 15;
+        ctx.fillRect(oPos.x - (totalW/2), oPos.y - (30*scale), totalW, 30*scale);
+    } else if (obs.type === 'block') {
+        ctx.fillStyle = '#ec4899'; ctx.shadowColor = '#ec4899'; ctx.shadowBlur = 15;
+        ctx.fillRect(oPos.x - (totalW/2), oPos.y - (80*scale), totalW, 80*scale);
+    } else if (obs.type === 'door') {
+        ctx.fillStyle = '#0ea5e9'; ctx.shadowColor = '#0ea5e9'; ctx.shadowBlur = 15;
+        ctx.fillRect(oPos.x - (totalW/2), oPos.y - (120*scale), totalW, 40*scale);
+        ctx.fillRect(oPos.x - (totalW/2), oPos.y - (120*scale), 20*scale, 120*scale);
+        ctx.fillRect(oPos.x + (totalW/2) - (20*scale), oPos.y - (120*scale), 20*scale, 120*scale);
+    }
+    ctx.restore();
+}
+
+// Draw shield ring around player when shield is active
+function drawShieldRing(p, subW) {
+    if (!p.shieldActive) return;
+    const basePos  = getScreenPos(p.lane, 0.85, subW);
+    const pulse    = 1 + Math.sin(frameCount * 0.15) * 0.08;
+    const radius   = 80;
+    const progress = p.shieldTimer / 1800;   // countdown 1 → 0
+    const secsLeft = Math.ceil(p.shieldTimer / 60);
+
+    ctx.save();
+
+    // Filled semi-transparent inner glow
+    ctx.beginPath();
+    ctx.arc(p.renderX || basePos.x, basePos.y - 35, radius * pulse, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(6,182,212,0.08)';
+    ctx.fill();
+
+    // Background ring (faint)
+    ctx.beginPath();
+    ctx.arc(p.renderX || basePos.x, basePos.y - 35, radius * pulse, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(6,182,212,0.2)';
+    ctx.lineWidth = 10;
+    ctx.stroke();
+
+    // Countdown arc — drains as time passes
+    ctx.beginPath();
+    ctx.arc(p.renderX || basePos.x, basePos.y - 35, radius * pulse,
+        -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * progress));
+    ctx.strokeStyle = secsLeft <= 5 ? '#fbbf24' : '#06b6d4';
+    ctx.lineWidth = 10;
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = 30;
+    ctx.stroke();
+
+    // Countdown text above player
+    ctx.fillStyle = secsLeft <= 5 ? '#fbbf24' : '#06b6d4';
+    ctx.shadowBlur = 8;
+    ctx.font = 'bold 22px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(`🛡️ ${secsLeft}s`, p.renderX || basePos.x, basePos.y - 35 - radius * pulse - 6);
+
+    ctx.restore();
+}
+
+function updateAndDrawPlayer(p, subW, playerIndex) {
+    const basePos = getScreenPos(p.lane, 0.85, subW);
+    
+    if (p.renderX === undefined) p.renderX = basePos.x;
+    p.renderX += (basePos.x - p.renderX) * 0.2;
+    
+    const dx = basePos.x - p.renderX;
+    p.renderAngle = dx * 0.005;
+
+    const isMovingLeft = dx < -2;
+    const isMovingRight = dx > 2;
+
+    let targetArmL = Math.PI * 0.5 + Math.sin(frameCount * 0.2) * 0.2;
+    let targetArmR = Math.PI * 0.5 - Math.sin(frameCount * 0.2) * 0.2;
+    let targetYOffset = 0;
+    let targetScaleY = 1;
+    let targetScaleX = 1;
+
+    if (p.isResting) {
+        // Arms crossed visual: arms point inward
+        targetArmL = Math.PI * 0.1;   // Right-ish
+        targetArmR = Math.PI * 0.9;   // Left-ish
+        targetYOffset = 0;
+        targetScaleY = 0.95;
+        targetScaleX = 1.05;
+    } else if (p.isJumping) {
+        targetYOffset = -90;
+        targetScaleY = 1.1;
+        targetScaleX = 0.9;
+        targetArmL = Math.PI * 1.4;
+        targetArmR = -Math.PI * 0.4;
+    } else if (p.isSquatting) {
+        targetYOffset = 0;
+        targetScaleY = 0.6;
+        targetScaleX = 1.3;
+        targetArmL = Math.PI;
+        targetArmR = 0;
+    } else {
+        targetYOffset = Math.sin(frameCount * 0.3) * 5;
+        if (isMovingLeft) targetArmL = Math.PI;
+        else if (isMovingRight) targetArmR = 0;
+    }
+
+    if (p.renderArmL === undefined) p.renderArmL = targetArmL;
+    if (p.renderArmR === undefined) p.renderArmR = targetArmR;
+
+    p.renderYOffset += (targetYOffset - p.renderYOffset) * 0.3;
+    p.renderScaleY += (targetScaleY - p.renderScaleY) * 0.3;
+    p.renderScaleX += (targetScaleX - p.renderScaleX) * 0.3;
+    p.renderArmL += (targetArmL - p.renderArmL) * 0.3;
+    p.renderArmR += (targetArmR - p.renderArmR) * 0.3;
+
+    // Draw shield ring behind player
+    drawShieldRing(p, subW);
+
+    ctx.save();
+    ctx.translate(p.renderX, basePos.y + p.renderYOffset);
+    ctx.rotate(p.renderAngle);
+    ctx.scale(p.renderScaleX, p.renderScaleY);
+
+    let color = playerIndex === 0 ? '#3b82f6' : '#ef4444';
+    if (p.shieldActive) color = '#06b6d4'; // Cyan tint while shielded
+    else if (p.isJumping) color = playerIndex === 0 ? '#60a5fa' : '#f87171';
+    else if (p.isSquatting) color = playerIndex === 0 ? '#1e3a8a' : '#7f1d1d';
+    else if (p.isResting) color = '#a78bfa'; // Purple tint while resting
+    if (p.invulnerableFrames > 0 && !p.shieldActive) color = '#ffffff';
+
+    const w = 50, h = 50;
+
+    if (p.isJumping) {
+        ctx.fillStyle = '#fb923c';
+        ctx.beginPath();
+        ctx.moveTo(-w/3, 0);
+        ctx.lineTo(0, 30 + Math.random() * 20);
+        ctx.lineTo(w/3, 0);
+        ctx.fill();
+    }
+
+    ctx.fillStyle = color;
+    const armLength = 30;
+    const armThickness = 12;
+    const shoulderY = -h + 15;
+
+    ctx.save();
+    ctx.translate(-w/2, shoulderY);
+    ctx.rotate(p.renderArmL);
+    ctx.beginPath();
+    ctx.roundRect(0, -armThickness/2, armLength, armThickness, armThickness/2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(w/2, shoulderY);
+    ctx.rotate(p.renderArmR);
+    ctx.beginPath();
+    ctx.roundRect(0, -armThickness/2, armLength, armThickness, armThickness/2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.shadowColor = p.shieldActive ? '#06b6d4' : color;
+    ctx.shadowBlur = p.shieldActive ? 25 : 15;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(-w/2, -h, w, h, 12);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.roundRect(-w/2 + 8, -h + 10, w - 16, 15, 6);
+    ctx.fill();
+
+    ctx.restore();
+    
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 0;
+    ctx.beginPath(); 
+    ctx.ellipse(p.renderX, basePos.y, 25 * p.renderScaleX, 8, 0, 0, Math.PI * 2); 
+    ctx.fill();
+}
+
+function gameLoop() {
+    if (gameState !== 'playing') return;
+    frameCount++;
+
+    // --- Orb notify timer ---
+    if (orbNotifyTimer > 0) {
+        orbNotifyTimer--;
+        if (orbNotifyTimer === 0) document.getElementById('orb-notify').classList.add('hidden');
+    }
+
+    // --- Shield timer tick ---
+    for (let i = 0; i < numPlayers; i++) {
+        let p = players[i];
+        if (p.shieldActive) {
+            p.shieldTimer--;
+            if (p.shieldTimer <= 0) {
+                p.shieldActive = false;
+                p.shieldTimer = 0;
+                document.getElementById('shield-active-hud').classList.add('hidden');
+                // No notification — shield just quietly ends
+            }
+        }
+    }
+
+    if (levelUpTimer > 0) {
+        levelUpTimer--;
+        if (levelUpTimer === 0) document.getElementById('level-up-overlay').classList.add('hidden');
+    } else {
+        score += (speed / 100);
+        // Track per-player score based on survival
+        for (let i = 0; i < numPlayers; i++) {
+            if (players[i].active && !players[i].eliminated) {
+                players[i].score = (players[i].score || 0) + (speed / 100);
+            }
+        }
+        speed = (4 + (score / 100)) * speedMultiplier;
+
+        if (score >= nextMilestone && nextMilestone <= 400) {
+            levelUpTimer = 300;
+            let msg = "";
+            if (nextMilestone === 100) msg = "Jump over three row obstacles!";
+            else if (nextMilestone === 200) msg = "Duck under the door frames!";
+            else if (nextMilestone === 300) msg = "You are a moving star!";
+            else if (nextMilestone === 400) msg = "You are a legend!";
+            document.getElementById('level-prompt-text').innerText = msg;
+            document.getElementById('level-up-overlay').classList.remove('hidden');
+            playSynth('levelup');
+            nextMilestone += 100;
+        } else {
+            let baseSpawnRate = Math.max(40, 100 - Math.floor((4 + score/100) * 3));
+            let spawnRate = Math.floor(baseSpawnRate / speedMultiplier);
+            if (frameCount % spawnRate === 0) spawnObstacle();
+            // Spawn orbs less frequently than obstacles
+            if (frameCount % 90 === 45) spawnOrb();
+        }
+    }
+
+    // Update obstacles
+    obstacles.forEach(obs => {
+        if (obs.active) {
+            obs.depth += (speed * 0.001) + (obs.depth * 0.02);
+            if (obs.depth > 1.2) obs.active = false;
+        }
+    });
+
+    // Update orbs
+    orbs.forEach(orb => {
+        if (orb.active) {
+            orb.depth += (speed * 0.001) + (orb.depth * 0.02);
+            if (orb.depth > 1.2) orb.active = false;
+        }
+    });
+
+    const playerDepth = 0.85;
+
+    // --- Collision: obstacles ---
+    for (let i = 0; i < numPlayers; i++) {
+        let p = players[i];
+        if (p.invulnerableFrames > 0) p.invulnerableFrames--;
+        if (p.lives <= 0) continue;
+
+        for (let obs of obstacles) {
+            if (!obs.active || p.invulnerableFrames > 0) continue;
+            if (obs.depth > playerDepth - 0.1 && obs.depth < playerDepth + 0.1) {
+                let isHitLane = Math.abs(p.lane - obs.lane) <= (obs.span - 1) / 2 + 0.01;
+                if (isHitLane) {
+                    let hit = false;
+                    if (obs.type === 'block') hit = true;
+                    else if ((obs.type === 'high' || obs.type === 'door') && !p.isSquatting) hit = true;
+                    else if ((obs.type === 'low' || obs.type === 'low-wide') && !p.isJumping) hit = true;
+
+                    if (hit) {
+                        if (p.shieldActive) {
+                            // Shield absorbs the hit silently — just destroy obstacle
+                            obs.active = false;
+                            playSynth('orb');
+                        } else {
+                            p.lives--; updateHUD(); playSynth('hit');
+                            if (p.lives > 0) p.invulnerableFrames = 60;
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Collision: orbs — completely ignored during shield/rest period ---
+        if (!p.shieldActive && !p.restingMode) {
+            for (let orb of orbs) {
+                // In 2P mode each orb tracks which players have collected it
+                if (numPlayers === 2) {
+                    if (!orb.collectedBy) orb.collectedBy = [];
+                    if (orb.collectedBy.includes(i)) continue; // this player already collected it
+                } else {
+                    if (!orb.active) continue;
+                }
+                if (orb.depth > playerDepth - 0.12 && orb.depth < playerDepth + 0.12) {
+                    if (Math.abs(p.lane - orb.lane) < 0.6) {
+                        if (numPlayers === 2) {
+                            orb.collectedBy.push(i);
+                            // Deactivate only when both players have collected or passed
+                            if (orb.collectedBy.length >= 2) orb.active = false;
+                        } else {
+                            orb.active = false;
+                        }
+                        if (orb.type === 'shield') {
+                            p.shieldOrbs++;
+                            updateHUD();
+                            playSynth('orb');
+                            showOrbNotify(`🛡️ +1 Shield!`, 'rgba(6,182,212,0.95)');
+                        } else if (orb.type === 'heart') {
+                            p.lives = Math.min(p.lives + 1, 9);
+                            updateHUD();
+                            playSynth('heart');
+                            showOrbNotify('💗 +1 Life!', 'rgba(236,72,153,0.95)');
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Game ends as soon as any player hits 0 lives
+    let anyDead = false;
+    for (let i=0; i<numPlayers; i++) {
+        if (players[i].lives <= 0) anyDead = true;
+    }
+    if (anyDead) { gameOver(); return; }
+
+    obstacles = obstacles.filter(o => o.active);
+    orbs = orbs.filter(o => o.active);
+    if (frameCount % 10 === 0) updateHUD();
+
+    ctx.clearRect(0, 0, gameWidth, gameHeight);
+    const subW = gameWidth / numPlayers;
+
+    for (let i = 0; i < numPlayers; i++) {
+        ctx.save();
+        ctx.translate(i * subW, 0);
+        ctx.beginPath();
+        ctx.rect(0, 0, subW, gameHeight); 
+        ctx.clip();
+        
+        drawBackground(subW);
+
+        // Draw orbs (behind obstacles)
+        orbs.sort((a,b) => a.depth - b.depth).forEach(orb => {
+            if (orb.active) drawOrb(orb, subW);
+        });
+
+        obstacles.sort((a,b) => a.depth - b.depth).forEach(obs => {
+            if (obs.active) drawObstacle(obs, subW);
+        });
+
+        if (players[i].lives > 0 && !players[i].eliminated && (players[i].invulnerableFrames === 0 || Math.floor(frameCount / 5) % 2 === 0)) {
+            updateAndDrawPlayer(players[i], subW, i);
+        }
+        ctx.restore();
+
+        if (i > 0) {
+            ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#475569' : '#ffffff';
+            ctx.fillRect(i * subW - 3, 0, 6, gameHeight);
+        }
+    }
+
+    gameLoopId = requestAnimationFrame(gameLoop);
+}
+
+/**
+ * INITIALIZATION
+ */
+window.addEventListener('DOMContentLoaded', () => {
+    // Animate loader progress bar then fade out
+    const bar = document.getElementById('loader-bar');
+    const label = document.getElementById('loader-label');
+    const labels = ['Initialising…', 'Loading AI Engine…', 'Setting up camera…', 'Almost ready…'];
+    let prog = 0, labelIdx = 0;
+    const loaderInterval = setInterval(() => {
+        prog += Math.random() * 18 + 6;
+        if (prog > 100) prog = 100;
+        bar.style.width = prog + '%';
+        labelIdx = Math.min(Math.floor(prog / 25), labels.length - 1);
+        label.textContent = labels[labelIdx];
+        if (prog >= 100) {
+            clearInterval(loaderInterval);
+            setTimeout(() => document.getElementById('loader').classList.add('hidden'), 400);
+        }
+    }, 180);
+
+    const savedTheme = localStorage.getItem('game_theme') || 'light';
+    document.getElementById('theme-select').value = savedTheme; updateTheme(savedTheme);
+    const savedLang = localStorage.getItem('game_lang') || 'en';
+    document.getElementById('lang-select').value = savedLang; updateLanguage(savedLang);
+    const savedName = localStorage.getItem('player_name');
+    if (savedName) document.getElementById('player-name').value = savedName;
+    const savedName2 = localStorage.getItem('player2_name');
+    if (savedName2) { currentPlayer2Name = savedName2; document.getElementById('player2-name').value = savedName2; }
+    drawStaticBackground();
+});
+</script>
+
+</body>
+</html>
