@@ -772,7 +772,7 @@
 
         <!-- Streak Bonus Banner -->
         <div id="streak-bonus-banner" class="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-none hidden z-50 bg-cyan-500/95 dark:bg-cyan-600/95 border-4 border-cyan-300 rounded-2xl px-8 py-4 shadow-2xl text-center">
-            <p class="text-white font-black text-2xl">🔥 3-Day Streak! 🛡️ +5 Shields Bonus!</p>
+            <p id="streak-bonus-text" class="text-white font-black text-2xl"></p>
         </div>
 
         <!-- Shield Active Overlay (shown on canvas via JS, this just shows the rest-mode text hint) -->
@@ -1496,10 +1496,10 @@ function handlePlayerMovement(player, landmarks) {
 
     if (armsCrossed) {
         player.isResting = true;
-        if (player.shieldOrbs > 0 && !player.shieldActive) {
+        if (player.shieldOrbs >= 5 && !player.shieldActive) {
             player.shieldActive = true;
             player.shieldTimer  = 300;
-            player.shieldOrbs--;
+            player.shieldOrbs -= 5;
             updateHUD();
             playSynth('shield');
         }
@@ -1850,7 +1850,7 @@ function drawBackground(canvasW) {
                 const t2 = frameCount * 0.012 + b * 1.8;
                 const opacity = (0.12 + Math.sin(frameCount * 0.018 + b) * 0.07) * (skyStyle >= 3 ? 1.5 : 1);
                 ctx.beginPath();
-                for (let x = 0; x <= canvasW; x += 8) {
+                for (let x = 0; x <= canvasW; x += 20) {
                     const y = baseY + Math.sin(x * 0.007 + t2) * 14 + Math.sin(x * 0.014 + t2 * 1.4) * 7;
                     x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
                 }
@@ -1862,24 +1862,26 @@ function drawBackground(canvasW) {
 
         // Twinkling stars — colorful from style 2+
         skyStarBase.forEach(s => {
-            s.twinkle += 0.055;   // faster twinkle cycle
-            const alpha = 0.55 + Math.sin(s.twinkle) * 0.45; // 0.1–1.0 (was 0.3–0.75)
+            s.twinkle += 0.055;
+            const alpha = 0.55 + Math.sin(s.twinkle) * 0.45; // 0.1–1.0
             const sx = s.x * canvasW / gameWidth;
-            const radius = s.r * 1.8 * (skyStyle >= 3 ? 1.5 : 1); // bigger base size
+            const radius = s.r * 1.8 * (skyStyle >= 3 ? 1.5 : 1);
+            const hueVal = (s.hue + frameCount * 0.3) % 360;
             const col = skyStyle >= 2
-                ? `hsla(${(s.hue + frameCount * 0.3) % 360},100%,${isDark ? 92 : 97}%,${Math.max(0, alpha)})`
+                ? `hsla(${hueVal},100%,${isDark ? 92 : 97}%,${Math.max(0, alpha)})`
                 : isDark ? `rgba(255,255,220,${Math.max(0, alpha)})` : `rgba(255,255,255,${Math.max(0, alpha)})`;
-            // Glow halo
-            ctx.save();
-            ctx.shadowBlur = 10 + radius * 3;
-            ctx.shadowColor = skyStyle >= 2
-                ? `hsla(${(s.hue + frameCount * 0.3) % 360},100%,85%,0.8)`
-                : isDark ? 'rgba(200,230,255,0.7)' : 'rgba(255,255,255,0.6)';
+            // Fake glow: outer soft halo (no shadowBlur — much cheaper)
+            ctx.beginPath();
+            ctx.arc(sx, s.y, radius * 3, 0, Math.PI * 2);
+            ctx.fillStyle = skyStyle >= 2
+                ? `hsla(${hueVal},100%,80%,${Math.max(0, alpha * 0.18)})`
+                : isDark ? `rgba(200,230,255,${Math.max(0, alpha * 0.18)})` : `rgba(255,255,255,${Math.max(0, alpha * 0.15)})`;
+            ctx.fill();
+            // Core star
             ctx.beginPath();
             ctx.arc(sx, s.y, radius, 0, Math.PI * 2);
             ctx.fillStyle = col;
             ctx.fill();
-            ctx.restore();
         });
 
         // Shooting stars — rate and colour change with style
@@ -1906,15 +1908,16 @@ function drawBackground(canvasW) {
             ctx.globalAlpha = p.life;
             const tailLen = p.len * p.life;
             const mag = Math.hypot(p.vx, p.vy);
-            // Bright core dot at head
-            ctx.shadowBlur = 18;
-            ctx.shadowColor = p.color + '1)';
+            // Bright core dot at head (no shadowBlur — use double circle fake glow)
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.lw * 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = p.color + '0.25)';
+            ctx.fill();
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.lw * 1.2, 0, Math.PI * 2);
             ctx.fillStyle = p.color + '1)';
             ctx.fill();
             // Fading tail
-            ctx.shadowBlur = 0;
             const grad = ctx.createLinearGradient(
                 p.x, p.y,
                 p.x - p.vx / mag * tailLen, p.y - p.vy / mag * tailLen
@@ -2120,33 +2123,36 @@ function startGameplay() {
         players[i].renderAngle = 0; players[i].renderArmL = undefined; players[i].renderArmR = undefined;
     }
 
-    // --- 3-DAY STREAK BONUS: give 5 shield orbs at start (once per day) ---
+    // --- STREAK BONUS + SPECIAL USERS: give 5 shield orbs at start ---
     const streak = parseInt(localStorage.getItem('current_streak')) || 0;
     const todayStr = new Date().toISOString().split('T')[0];
     const claimedDate = localStorage.getItem('streak_bonus_claimed_date');
-    if (streak >= 3 && claimedDate !== todayStr) {
-        for (let i=0; i<numPlayers; i++) players[i].shieldOrbs = 5;
-        localStorage.setItem('streak_bonus_claimed_date', todayStr);
-        // Force CSS animation to replay by cloning the banner
-        const banner = document.getElementById('streak-bonus-banner');
-        banner.classList.remove('hidden');
-        // Reset animation
-        banner.style.animation = 'none';
-        banner.offsetHeight; // reflow
-        banner.style.animation = '';
-        setTimeout(() => banner.classList.add('hidden'), 4000);
-        streakBonusGranted = true;
-        // Hide the dashboard notice since bonus is now claimed
-        document.getElementById('streak-reward-notice').classList.add('hidden');
-    }
-
-    // Special users always start with 5 shields
     const specialUsers = ['bin', 'pavani', 'simin', 'moosa'];
     const playerNames = [currentPlayerName, currentPlayer2Name];
+    const isSpecialUser = playerNames.slice(0, numPlayers).some(n => specialUsers.includes((n || '').toLowerCase()));
+
+    // Grant shields
+    if (streak >= 3 && claimedDate !== todayStr) {
+        for (let i = 0; i < numPlayers; i++) players[i].shieldOrbs = 5;
+        localStorage.setItem('streak_bonus_claimed_date', todayStr);
+        streakBonusGranted = true;
+        document.getElementById('streak-reward-notice').classList.add('hidden');
+    }
     for (let i = 0; i < numPlayers; i++) {
         if (specialUsers.includes((playerNames[i] || '').toLowerCase())) {
             players[i].shieldOrbs = Math.max(players[i].shieldOrbs, 5);
         }
+    }
+
+    // Show banner only for special users or users who genuinely just earned the streak bonus
+    if (isSpecialUser || streakBonusGranted) {
+        document.getElementById('streak-bonus-text').textContent = `🔥 ${streak}-Day Login Streak  🛡️ +5 Shields!`;
+        const banner = document.getElementById('streak-bonus-banner');
+        banner.classList.remove('hidden');
+        banner.style.animation = 'none';
+        banner.offsetHeight;
+        banner.style.animation = '';
+        setTimeout(() => banner.classList.add('hidden'), 4500);
     }
 
     updateHUD();
@@ -2446,7 +2452,10 @@ function gameLoop() {
     if (levelUpTimer > 0) {
         levelUpTimer--;
         if (levelUpTimer === 0) document.getElementById('level-up-overlay').classList.add('hidden');
-    } else {
+    }
+
+    // Score and obstacle spawning always run (independent of levelUpTimer display)
+    {
         score += (speed / 100);
         // Track per-player score based on survival
         for (let i = 0; i < numPlayers; i++) {
