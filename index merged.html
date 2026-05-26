@@ -1145,18 +1145,28 @@ function getLBKey() {
     return speedMultiplier < 1 ? 'game_leaderboard_chill' : 'game_leaderboard_normal';
 }
 
+// Reset both leaderboards to fresh mock data
+(function resetLeaderboards() {
+    localStorage.removeItem('game_leaderboard_normal');
+    localStorage.removeItem('game_leaderboard_chill');
+})();
+
 function getDefaultBoard(key) {
     if (key === 'game_leaderboard_chill') {
         return [
-            { name: "NanaTui",   score: 27 },
-            { name: "KoroHec",   score: 21 },
-            { name: "AuntyBev",  score: 14 }
+            { name: "MargaretW",  score: 94 },
+            { name: "RonaldB",    score: 76 },
+            { name: "DorisK",     score: 58 },
+            { name: "HelenT",     score: 43 },
+            { name: "FrankM",     score: 29 }
         ];
     }
     return [
-        { name: "WaikatoChamp", score: 850 },
-        { name: "Sarah123",     score: 620 },
-        { name: "TeKauri",      score: 430 }
+        { name: "WaikatoChamp", score: 187 },
+        { name: "Sarah123",     score: 162 },
+        { name: "TeKauri",      score: 134 },
+        { name: "HinaM",        score: 109 },
+        { name: "JakeR",        score: 88  }
     ];
 }
 
