@@ -252,17 +252,18 @@
             </div>
 
             <!-- DAILY STREAK SCREEN -->
-            <div id="streak-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-orange-400/60 text-center max-w-xl w-[90%] shadow-2xl backdrop-blur-md hidden">
+            <div id="streak-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-indigo-500/40 text-center max-w-xl w-[90%] shadow-2xl backdrop-blur-md hidden">
                 <!-- Title -->
                 <div class="flex items-center justify-center gap-3 mb-2">
                     <span class="text-4xl">🔥</span>
-                    <h1 class="text-4xl font-black" style="background:linear-gradient(90deg,#22c55e,#fbbf24,#fb923c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Daily Play Streak</h1>
+                    <h1 class="text-4xl font-black text-indigo-600 dark:text-indigo-400">Daily Play Streak</h1>
                 </div>
-                <p class="text-sm font-bold text-gray-400 dark:text-gray-500 tracking-widest mb-6">KEEP PLAYING EVERY DAY</p>
+
 
                 <!-- Big streak number -->
                 <p id="streak-big-number" class="text-8xl font-black text-yellow-400 mb-4">1</p>
-                <p id="streak-big-msg" class="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-6">🎉 3 Days in a Row!</p>
+                <p id="streak-big-msg" class="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-6">Great start! Come back tomorrow.</p>
+
 
                 <!-- Day dots -->
                 <div class="flex justify-center gap-8 mb-6">
@@ -281,93 +282,46 @@
                 </div>
 
                 <!-- Warning -->
-                <div class="bg-orange-100 border-2 border-orange-500 rounded-2xl px-6 py-4 mb-6">
-                    <p class="text-orange-700 font-black text-xl">⚠️ Miss a day and your streak resets to 0!</p>
+                <div class="bg-indigo-50 border-2 border-indigo-400 rounded-2xl px-6 py-4 mb-6">
+                    <p class="text-indigo-700 font-black text-xl">⚠️ Miss a day and your streak resets to 0!</p>
                 </div>
 
                 <!-- Next button -->
-                <button id="btn-streak-next" class="w-full text-gray-900 font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl" style="background:linear-gradient(135deg,#22c55e,#06b6d4);">
+                <button id="btn-streak-next" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl">
                     Next →
                 </button>
             </div>
 
             <!-- DASHBOARD SCREEN -->
-            <div id="dashboard-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-indigo-500/40 text-center max-w-3xl w-[95%] shadow-2xl backdrop-blur-md hidden mt-4 mb-4">
-                <h1 id="txt-hello" class="text-4xl md:text-5xl font-black mb-6 text-gray-900 dark:text-white">Hello, </h1>
+            <div id="dashboard-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-indigo-500/40 text-center max-w-xl w-[95%] shadow-2xl backdrop-blur-md hidden mt-4 mb-4">
+                <h1 id="txt-hello" class="text-4xl md:text-5xl font-black mb-8 text-gray-900 dark:text-white">Hello, </h1>
                 
-                <div class="flex flex-col md:flex-row gap-6 mb-8">
-                    <div class="flex-1 bg-blue-50 dark:bg-blue-900/30 border-4 border-blue-400 p-6 rounded-2xl flex flex-col justify-center">
-                        <h2 id="txt-streak-title" class="text-2xl font-bold text-blue-800 dark:text-blue-300 mb-2">Daily Login Streak</h2>
-                        <div class="text-6xl font-black text-blue-600 dark:text-blue-400 flex justify-center items-center gap-4">
-                            <span>🔥</span> <span id="streak-number">1</span> <span>🔥</span>
-                        </div>
-                        <!-- Streak reward notice -->
-                        <div id="streak-reward-notice" class="hidden mt-3 bg-cyan-100 dark:bg-cyan-900/50 border-2 border-cyan-400 rounded-xl p-3">
-                            <p class="text-cyan-800 dark:text-cyan-300 font-bold text-lg">🛡️ 3-Day Streak Bonus! You'll start with <strong>5 shields</strong>!</p>
-                        </div>
+                <div class="flex flex-col gap-4">
+                    <!-- 1P / 2P toggle -->
+                    <div class="flex gap-3">
+                        <button id="btn-mode-1p" class="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl border-4 border-indigo-400 transform transition hover:scale-105 active:scale-95 text-2xl">👤 1 Player</button>
+                        <button id="btn-mode-2p" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-black py-4 rounded-2xl border-4 border-transparent transform transition hover:scale-105 active:scale-95 text-2xl">👥 2 Player</button>
                     </div>
-                    
-                    <div class="flex-1 flex flex-col gap-4">
-                        <div class="flex justify-center gap-2">
-                            <button id="btn-mode-1p" class="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-xl border-4 border-indigo-400 transform transition">1 Player</button>
-                            <button id="btn-mode-2p" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-3 rounded-xl border-4 border-transparent transform transition">2 Player</button>
-                        </div>
-                        <!-- P2 name input shown in 2P mode -->
-                        <div id="p2-name-input-wrap" class="hidden">
-                            <input type="text" id="player2-name" placeholder="Player 2 Name" class="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-2xl p-4 rounded-xl border-4 border-red-300 dark:border-red-600 text-center font-bold" />
-                        </div>
-                        <button id="btn-play" class="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-black py-6 px-8 rounded-2xl shadow-xl transform transition hover:scale-105 active:scale-95 text-3xl flex flex-col justify-center items-center gap-2">
-                            <span id="txt-play-btn">Start Camera & Play</span>
-                            <span class="text-lg font-bold opacity-80" id="txt-play-sub">Get ready to move!</span>
-                        </button>
-                    </div>
-                </div>
 
-                <!-- Reward guide -->
-                <div class="bg-gray-50 dark:bg-gray-800/60 rounded-2xl p-4 border-2 border-gray-200 dark:border-gray-700 mb-6 text-left">
-                    <h3 class="text-xl font-black text-gray-800 dark:text-gray-200 mb-3">🎁 Collect Orbs While Playing!</h3>
-                    <div class="flex gap-4">
-                        <div class="flex items-center gap-2 flex-1">
-                            <span class="text-3xl">🔵</span>
-                            <div>
-                                <p class="font-black text-cyan-700 dark:text-cyan-300">Cyan Shield Orb</p>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Collect orbs → cross arms to activate rest shield</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 flex-1">
-                            <span class="text-3xl">💗</span>
-                            <div>
-                                <p class="font-black text-pink-700 dark:text-pink-300">Pink Heart Orb</p>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Gain +1 extra life instantly</p>
-                            </div>
-                        </div>
+                    <!-- P2 name input shown in 2P mode -->
+                    <div id="p2-name-input-wrap" class="hidden">
+                        <input type="text" id="player2-name" placeholder="Player 2 Name" class="w-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-2xl p-4 rounded-xl border-4 border-red-300 dark:border-red-600 text-center font-bold" />
                     </div>
-                </div>
 
-                <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 border-2 border-gray-200 dark:border-gray-700">
-                    <div class="flex justify-between items-center border-b-2 border-gray-300 dark:border-gray-600 pb-2 mb-4">
-                        <h2 class="text-3xl font-black text-gray-800 dark:text-gray-200 text-left">🏆 Top Players</h2>
-                        <button id="btn-toggle-lb" onclick="toggleLeaderboard()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-2 px-5 rounded-xl shadow transform transition hover:scale-105 active:scale-95 text-lg">🏆 Leaderboard</button>
+                    <!-- Play button -->
+                    <button id="btn-play" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-black py-7 px-8 rounded-2xl shadow-xl transform transition hover:scale-105 active:scale-95 text-3xl flex flex-col justify-center items-center gap-2">
+                        <span id="txt-play-btn">▶ Play</span>
+                    </button>
+
+                    <!-- Streak reward notice -->
+                    <div id="streak-reward-notice" class="hidden bg-cyan-100 dark:bg-cyan-900/50 border-2 border-cyan-400 rounded-xl p-3 text-center">
+                        <p class="text-cyan-800 dark:text-cyan-300 font-bold text-lg">🛡️ 3-Day Streak Bonus! You'll start with <strong>5 shields</strong>!</p>
                     </div>
-                    <div id="leaderboard-table-wrap" style="display:none;">
-                        <!-- Normal / Chill tab switcher -->
-                        <div class="flex gap-2 mb-4">
-                            <button id="lb-tab-normal" onclick="switchLBTab('normal')" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-xl border-2 border-green-400 text-lg">Normal</button>
-                            <button id="lb-tab-chill" onclick="switchLBTab('chill')" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-2 rounded-xl border-2 border-transparent text-lg">Chill Mode</button>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xl">
-                                <thead>
-                                    <tr class="text-gray-500 dark:text-gray-400 border-b border-gray-300 dark:border-gray-600">
-                                        <th id="txt-rank" class="p-3 font-bold">Rank</th>
-                                        <th id="txt-name" class="p-3 font-bold">Name</th>
-                                        <th id="txt-score" class="p-3 font-bold">Score</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="leaderboard-body" class="text-gray-800 dark:text-gray-200 font-semibold"></tbody>
-                            </table>
-                        </div>
-                    </div>
+
+                    <!-- Leaderboard button -->
+                    <button onclick="toggleLeaderboard()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 px-8 rounded-2xl shadow-lg transform transition hover:scale-105 active:scale-95 text-2xl">
+                        🏆 Leaderboard
+                    </button>
                 </div>
             </div>
 
@@ -385,12 +339,10 @@
                 <p id="txt-warning-1" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-6">
                     Please play in a clear, dry, non-slip area with enough room to move both arms.
                 </p>
-                <p id="txt-warning-2" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-6">
-                    Go at your own pace and hold nearby support if needed.
-                </p>
-                <p id="txt-warning-3" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-8">
-                    Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.
-                </p>
+                <ul class="text-gray-700 dark:text-amber-100/95 text-xl font-medium leading-relaxed space-y-4 mb-8 list-disc pl-6">
+                    <li id="txt-warning-2">Go at your own pace and hold nearby support if needed.</li>
+                    <li id="txt-warning-3">Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.</li>
+                </ul>
                 <button type="button" id="warning-continue-btn" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-black py-5 px-6 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-2xl md:text-3xl w-full">
                     I understand
                 </button>
@@ -567,6 +519,32 @@
             </div>
         </div>
 
+    </div>
+</div>
+
+<!-- ===== LEADERBOARD MODAL ===== -->
+<div id="lb-modal" class="fixed inset-0 z-[100] items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-auto" style="display:none;">
+    <div class="bg-white dark:bg-gray-900 rounded-3xl border-4 border-indigo-400 shadow-2xl w-[90%] max-w-lg p-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-black text-gray-800 dark:text-gray-200">🏆 Top Players</h2>
+            <button onclick="toggleLeaderboard()" class="text-gray-400 hover:text-gray-800 dark:hover:text-white text-3xl font-black leading-none w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition">✕</button>
+        </div>
+        <div class="flex gap-2 mb-4">
+            <button id="lb-tab-normal" onclick="switchLBTab('normal')" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-xl border-2 border-green-400 text-lg">Normal</button>
+            <button id="lb-tab-chill" onclick="switchLBTab('chill')" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-2 rounded-xl border-2 border-transparent text-lg">Chill Mode</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xl">
+                <thead>
+                    <tr class="text-gray-500 dark:text-gray-400 border-b border-gray-300 dark:border-gray-600">
+                        <th id="txt-rank" class="p-3 font-bold">Rank</th>
+                        <th id="txt-name" class="p-3 font-bold">Name</th>
+                        <th id="txt-score" class="p-3 font-bold">Score</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body" class="text-gray-800 dark:text-gray-200 font-semibold"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -830,7 +808,8 @@ function calculateStreak() {
         // Reset bonus-claimed flag on new day login
         localStorage.removeItem('streak_bonus_claimed_date');
     }
-    document.getElementById('streak-number').textContent = currentStreak;
+    const streakNumberEl = document.getElementById('streak-number');
+    if (streakNumberEl) streakNumberEl.textContent = currentStreak;
 
     // Show streak bonus notice on dashboard if eligible
     if (currentStreak >= 3) {
@@ -1374,15 +1353,13 @@ function switchLBTab(tab) {
 }
 
 function toggleLeaderboard() {
-    const wrap = document.getElementById('leaderboard-table-wrap');
-    const btn  = document.getElementById('btn-toggle-lb');
-    if (wrap.style.display === 'none' || !wrap.style.display) {
-        wrap.style.display = 'block';
-        btn.textContent = '✕ Hide';
+    const modal = document.getElementById('lb-modal');
+    if (!modal) return;
+    if (modal.style.display === 'none' || !modal.style.display) {
+        modal.style.display = 'flex';
         renderLeaderboard();
     } else {
-        wrap.style.display = 'none';
-        btn.textContent = '🏆 Leaderboard';
+        modal.style.display = 'none';
     }
 }
 
@@ -1393,9 +1370,9 @@ document.getElementById('restart-btn').addEventListener('click', () => {
     videoElement.classList.add('hidden');
     camSingle.classList.add('hidden');
     document.getElementById('split-cam-container').style.display = 'none';
-    // Reset leaderboard toggle to hidden on return
-    document.getElementById('leaderboard-table-wrap').classList.add('hidden');
-    document.getElementById('btn-toggle-lb').textContent = '🏆 Leaderboard';
+    // Close leaderboard modal if open
+    const lbModal = document.getElementById('lb-modal');
+    if (lbModal) lbModal.style.display = 'none';
     document.getElementById('gameover-lb-wrap').classList.add('hidden');
     document.getElementById('btn-gameover-lb').textContent = '🏆 Leaderboard';
     if (document.getElementById('winner-banner')) document.getElementById('winner-banner').classList.add('hidden');
@@ -1645,6 +1622,7 @@ function gameOver() {
         // players[0] = LEFT board = currentPlayerName (entered first)
         // players[1] = RIGHT board = currentPlayer2Name (entered second)
         // Stats cards: final-p1-name = LEFT, final-p2-name = RIGHT
+        document.getElementById('final-p1-stats-name').classList.remove('hidden');
         document.getElementById('final-p1-stats-name').innerText = currentPlayerName;
         document.getElementById('final-p2-stats-name').innerText = currentPlayer2Name;
         document.getElementById('final-p1-squats').innerText = players[0].stats.squats;
@@ -1673,7 +1651,8 @@ function gameOver() {
         document.getElementById('winner-score').innerText = winnerScore;
     } else {
         // Single player
-        document.getElementById('final-p1-stats-name').innerText = currentPlayerName;
+        document.getElementById('final-p1-name').innerText = currentPlayerName;
+        document.getElementById('final-p1-stats-name').classList.add('hidden');
         document.getElementById('score-row').style.display = '';
         document.getElementById('final-score').innerText = Math.floor(score);
         document.getElementById('final-p1-squats').innerText = players[0].stats.squats;
