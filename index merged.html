@@ -373,7 +373,7 @@
                 <p class="text-indigo-700 dark:text-indigo-200 text-2xl font-black uppercase tracking-wide" id="p1-hud-name-1p">Player 1</p>
                 <p class="text-indigo-700 dark:text-indigo-200 text-sm font-bold uppercase tracking-wider" id="txt-hud-activity-1p">Activity</p>
                 <p class="text-2xl font-black text-indigo-900 dark:text-white"><span id="squats-display-1p">0</span> <span id="txt-hud-squats-1p">Squats</span></p>
-                <p class="text-2xl font-black text-indigo-900 dark:text-white"><span id="jumps-display-1p">0</span> <span id="txt-hud-jumps-1p">Jumps</span></p>
+                <p class="text-2xl font-black text-indigo-900 dark:text-white"><span id="jumps-display-1p">0</span> <span id="txt-hud-jumps-1p">Fly</span></p>
                 <p class="text-xl font-bold text-orange-600 dark:text-yellow-400 mt-1"><span id="calories-display-1p">0.0</span> kcal</p>
             </div>
         </div>
@@ -397,7 +397,7 @@
                 <div class="bg-rose-100/80 dark:bg-rose-700/60 rounded-lg p-3 text-right">
                     <p class="text-rose-700 dark:text-rose-200 text-[1.95rem] font-black uppercase tracking-wide" id="p2-hud-name">Player 2</p>
                     <p class="text-lg font-black text-rose-900 dark:text-white"><span id="p2-squats">0</span> Squats</p>
-                    <p class="text-lg font-black text-rose-900 dark:text-white"><span id="p2-jumps">0</span> Jumps</p>
+                    <p class="text-lg font-black text-rose-900 dark:text-white"><span id="p2-jumps">0</span> Fly</p>
                     <p class="text-base font-bold text-orange-600 dark:text-yellow-400"><span id="p2-calories">0.0</span> kcal</p>
                 </div>
             </div>
@@ -418,7 +418,7 @@
                 <div class="bg-indigo-100/80 dark:bg-indigo-700/60 rounded-lg p-3 text-right">
                     <p class="text-indigo-700 dark:text-indigo-200 text-[1.95rem] font-black uppercase tracking-wide" id="p1-hud-name">Player 1</p>
                     <p class="text-lg font-black text-indigo-900 dark:text-white"><span id="p1-squats">0</span> Squats</p>
-                    <p class="text-lg font-black text-indigo-900 dark:text-white"><span id="p1-jumps">0</span> Jumps</p>
+                    <p class="text-lg font-black text-indigo-900 dark:text-white"><span id="p1-jumps">0</span> Fly</p>
                     <p class="text-base font-bold text-orange-600 dark:text-yellow-400"><span id="p1-calories">0.0</span> kcal</p>
                 </div>
             </div>
@@ -703,7 +703,7 @@
                         <div class="flex justify-between text-base font-bold">
                             <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">SQUATS</span> <span id="final-p1-squats" class="text-2xl">0</span></div>
                             <div id="final-p1-energy-col" class="text-center"><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">ENERGY</span> <span id="final-p1-energy" class="text-2xl text-orange-600 dark:text-yellow-400 font-black">0.0</span><span class="text-2xl text-gray-400 ml-0.5">kcal</span></div>
-                            <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">JUMPS</span> <span id="final-p1-jumps" class="text-2xl">0</span></div>
+                            <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">FLY</span> <span id="final-p1-jumps" class="text-2xl">0</span></div>
                         </div>
                     </div>
                     <div id="final-p2-container" class="relative hidden flex-1 bg-red-50 dark:bg-red-900/40 p-5 rounded-2xl border border-red-300 dark:border-red-700">
@@ -712,7 +712,7 @@
                         <div class="flex justify-between text-base font-bold">
                             <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">SQUATS</span> <span id="final-p2-squats" class="text-2xl">0</span></div>
                             <div id="final-p2-energy-col" class="text-center"><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">ENERGY</span> <span id="final-p2-energy" class="text-2xl text-orange-600 dark:text-yellow-400 font-black">0.0</span><span class="text-2xl text-gray-400 ml-0.5">kcal</span></div>
-                            <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">JUMPS</span> <span id="final-p2-jumps" class="text-2xl">0</span></div>
+                            <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">FLY</span> <span id="final-p2-jumps" class="text-2xl">0</span></div>
                         </div>
                     </div>
                 </div>
@@ -844,7 +844,7 @@ const translations = {
         readySub: "Step back so your upper body is visible. Stand still in the center to calibrate.",
         startCalBtn: "Start Calibration", standStill: "Stand Still...", learning: "Learning your neutral pose.",
         gameOver: "Great Job!", finalScore: "Score: ", returnDash: "Return to Dashboard",
-        hudScore1p: "Score", hudLives1p: "Lives", hudActivity1p: "Activity", hudSquats1p: "Squats", hudJumps1p: "Jumps",
+        hudScore1p: "Score", hudLives1p: "Lives", hudActivity1p: "Activity", hudSquats1p: "Squats", hudJumps1p: "Fly",
         speedNormal: "Normal Mode", speedChill: "Chill Mode",
         healthTipLabel: "Health tip", healthTipSource: "Source: NZ Ministry of Health",
         instructionScreenTitle: "Active Runner - How to play",
@@ -880,7 +880,7 @@ const translations = {
         readySub: "Hoki whakamuri kia kitea te tinana. Tū mārie i waenganui.",
         startCalBtn: "Tīmata", standStill: "Tū Mārie...", learning: "E ako ana i tō tūnga.",
         gameOver: "Ka Rawe!", finalScore: "Kaute: ", returnDash: "Hoki ki te Pīhono",
-        hudScore1p: "Kaute", hudLives1p: "Oranga", hudActivity1p: "Mahi", hudSquats1p: "Piko", hudJumps1p: "Peke",
+        hudScore1p: "Kaute", hudLives1p: "Oranga", hudActivity1p: "Mahi", hudSquats1p: "Piko", hudJumps1p: "Rere",
         speedNormal: "Mahi Pūnoa", speedChill: "Mahi Whakatā",
         healthTipLabel: "Kupu hauora", healthTipSource: "Pūtake: Manatū Hauora — NZ Ministry of Health",
         instructionScreenTitle: "Active Runner - How to play",
@@ -1251,7 +1251,7 @@ window.addEventListener('resize', () => {
 let gameState = 'login'; 
 let score = 0, speed = 4, frameCount = 0, obstacles = [], gameLoopId;
 let speedMultiplier = 1; // 1 = Normal, 0.25 = Chill
-let levelUpTimer = 0, nextMilestone = 100;
+let levelUpTimer = 0, nextMilestone = 100, blockRestTimer = 0;
 let skyEffectsEnabled = false, skyStarBase = [], skyParticles = [], skyStyle = 0;
 const CALIBRATION_REQUIRED_FRAMES = 60; 
 
@@ -2111,7 +2111,7 @@ function startGameplay() {
     }
     
     gameState = 'playing'; score = 0; speed = 4; frameCount = 0; obstacles = []; orbs = [];
-    levelUpTimer = 0; nextMilestone = 100; streakBonusGranted = false;
+    levelUpTimer = 0; nextMilestone = 100; streakBonusGranted = false; blockRestTimer = 0;
     skyStyle = 0; skyParticles = [];
     // Sky starts immediately with base style
     skyEffectsEnabled = true;
@@ -2475,10 +2475,13 @@ function gameLoop() {
         }
         speed = (4 + (score / 100)) * speedMultiplier;
 
+        if (blockRestTimer > 0) blockRestTimer--;
+
         if (score >= nextMilestone && nextMilestone <= 400) {
             levelUpTimer = 300;
+            blockRestTimer = 240; // 4-second block-free rest
             let msg = "";
-            if (nextMilestone === 100) msg = "Jump over three row obstacles!";
+            if (nextMilestone === 100) msg = "Fly over three row obstacles!";
             else if (nextMilestone === 200) msg = "Duck under the door frames!";
             else if (nextMilestone === 300) msg = "You are a moving star!";
             else if (nextMilestone === 400) msg = "You are a legend!";
@@ -2488,7 +2491,7 @@ function gameLoop() {
             document.getElementById('level-up-overlay').classList.remove('hidden');
             playSynth('levelup');
             nextMilestone += 100;
-        } else {
+        } else if (blockRestTimer === 0) {
             let baseSpawnRate = Math.max(40, 100 - Math.floor((4 + score/100) * 3));
             let spawnRate = Math.floor(baseSpawnRate / speedMultiplier);
             if (frameCount % spawnRate === 0) spawnObstacle();
