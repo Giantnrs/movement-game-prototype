@@ -22,7 +22,24 @@
     </script>
     
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background-color 0.3s; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        /* Animated background — visible during all non-gameplay states */
+        #bg-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* Teal card border matching login.html style */
+        .card-teal {
+            border: 2px solid rgba(42,157,143,0.45) !important;
+            box-shadow: 0 0 0 1px rgba(42,157,143,0.10) inset,
+                        0 32px 80px rgba(42,157,143,0.12),
+                        0 0 80px rgba(42,157,143,0.08) !important;
+        }
         #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
         #game-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
         #webcam-video { display: none !important; }
@@ -122,53 +139,23 @@
         }
         #streak-bonus-banner { animation: slideDown 4s ease forwards; }
 
-        /* Splash screen — before login */
-        #splash-screen {
-            position: absolute;
-            inset: 0;
-            z-index: 40;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            padding-bottom: clamp(3rem, 12vh, 6rem);
-            gap: 0;
-            pointer-events: auto;
-            background-color: #e8f6f4;
-            background-image: url('background.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+        /* Koru draw animation (under theme button) */
+        .login-koru-btn path {
+            stroke: #3dbdad;
+            stroke-width: 3.5;
+            fill: none;
+            stroke-linecap: round;
+            stroke-dasharray: 220;
+            stroke-dashoffset: 220;
+            animation: drawKoruL 2.2s cubic-bezier(.4,0,.2,1) 0.8s forwards;
         }
-        .dark #splash-screen {
-            background-color: #0f172a;
-            background-image: url('background.png');
+        .login-koru-btn .stem {
+            stroke-dasharray: 40;
+            stroke-dashoffset: 40;
+            animation: drawKoruL 0.6s ease 2.9s forwards;
         }
-        .splash-loading-block {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1.5rem;
-        }
-        .splash-spinner {
-            width: 5.5rem;
-            height: 5.5rem;
-            border: 6px solid rgba(0, 0, 0, 0.15);
-            border-top-color: #000000;
-            border-radius: 50%;
-            animation: splashSpin 0.85s linear infinite;
-        }
-        .splash-loading-text {
-            font-size: clamp(1.5rem, 4vw, 2rem);
-            font-weight: 700;
-            color: #000000;
-            letter-spacing: 0.06em;
-            margin: 0;
-        }
-        @keyframes splashSpin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes drawKoruL { to { stroke-dashoffset: 0; } }
 
         /* Login screen — Kia Kaha onboarding */
         #login-screen-wrap {
@@ -181,34 +168,90 @@
             padding: 1.25rem;
             overflow-y: auto;
             pointer-events: auto;
-            background-color: #e8f6f4;
-            background-image: url('background.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
+            background: transparent;
         }
         .dark #login-screen-wrap {
-            background-color: #0f172a;
-            background-image: url('background.png');
+            background: transparent;
         }
         #login-screen {
             width: 100%;
             max-width: 40rem;
-            background: #ffffff;
-            border: 4px solid rgba(99, 102, 241, 0.4);
-            border-radius: 1.5rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(24px) saturate(1.4);
+            -webkit-backdrop-filter: blur(24px) saturate(1.4);
+            border: 1.5px solid rgba(42,157,143,0.3);
+            border-radius: 2rem;
+            box-shadow: 0 0 0 1px rgba(42,157,143,0.12) inset,
+                        0 32px 80px rgba(42,157,143,0.1),
+                        0 0 80px rgba(42,157,143,0.08);
             padding: 2.25rem 2.25rem 2rem;
             text-align: left;
-            border: none;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 1.25rem;
         }
         .dark #login-screen {
-            background: rgba(17, 24, 39, 0.95);
-            border-color: rgba(99, 102, 241, 0.45);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+            background: rgba(10, 30, 20, 0.92);
+            backdrop-filter: blur(24px) saturate(1.4);
+            -webkit-backdrop-filter: blur(24px) saturate(1.4);
+            border-color: rgba(42,157,143,0.45);
+            box-shadow: 0 0 0 1px rgba(42,157,143,0.18) inset,
+                        0 32px 80px rgba(42,157,143,0.12),
+                        0 0 80px rgba(0,0,0,0.3);
         }
+        /* Background intro overlay */
+        #bg-intro {
+            position: fixed; inset: 0; z-index: 100;
+            background: url('background.png') center/cover no-repeat;
+            transition: opacity 0.9s ease, visibility 0.9s ease;
+        }
+        #bg-intro.out { opacity: 0; visibility: hidden; pointer-events: none; }
+
+        /* Login card entrance animation (matches login.html) */
+        #login-screen {
+            animation: loginCardIn 1.4s cubic-bezier(.16,.8,.3,1) 2s both;
+        }
+        @keyframes loginCardIn {
+            0%   { opacity: 0; transform: translateY(44px) scale(0.95); }
+            60%  { opacity: 1; }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Winner stamp */
+        .winner-stamp {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-14deg) scale(0);
+            width: 160px; height: 60px;
+            border: 6px solid rgba(234,179,8,0.88);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none; opacity: 0;
+            box-shadow: 0 0 0 3px rgba(234,179,8,0.18) inset;
+            z-index: 10;
+        }
+        .winner-stamp.show {
+            animation: stampThud 0.5s cubic-bezier(.36,.07,.19,.97) 0.55s both;
+        }
+        .winner-stamp-text {
+            font-size: 1.45rem; font-weight: 900;
+            color: rgba(234,179,8,0.9);
+            text-transform: uppercase; letter-spacing: 0.12em;
+            text-align: center; line-height: 1.15;
+        }
+        @keyframes stampThud {
+            0%   { transform: translate(-50%,-50%) rotate(-14deg) scale(2.8); opacity: 0; }
+            55%  { transform: translate(-50%,-50%) rotate(-14deg) scale(0.88); opacity: 1; }
+            75%  { transform: translate(-50%,-50%) rotate(-14deg) scale(1.06); opacity: 1; }
+            100% { transform: translate(-50%,-50%) rotate(-14deg) scale(1);    opacity: 1; }
+        }
+
+        /* 2P mode game over: hide energy, larger names, smaller grey labels */
+        #game-over-screen.mode-2p #final-p1-energy-col,
+        #game-over-screen.mode-2p #final-p2-energy-col { display: none !important; }
+        #game-over-screen.mode-2p #final-p1-stats-name,
+        #game-over-screen.mode-2p #final-p2-stats-name { font-size: 2.2rem !important; margin-bottom: 0.5rem; }
+        #game-over-screen.mode-2p .go-stat-label { font-size: 1.1rem !important; }
+
         .login-ui { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .login-teal { color: #26a69a; }
         .dark .login-teal { color: #2dd4bf; }
@@ -274,13 +317,15 @@
         #login-name-check.is-visible { opacity: 1; }
     </style>
 </head>
-<body class="bg-slate-100 dark:bg-[#1a202c] text-gray-900 dark:text-white">
+<body class="text-gray-900 dark:text-white">
+
+<canvas id="bg-canvas"></canvas>
 
 <div id="game-container">
     <!-- Hidden source video (used by MediaPipe) -->
     <video id="webcam-video" class="hidden" autoplay playsinline></video>
     <!-- Split camera: P1 left, P2 right — only shown in 2P mode during gameplay -->
-    <div id="split-cam-container" style="position:absolute;bottom:16px;left:0;width:100%;display:none;justify-content:space-between;pointer-events:none;z-index:20;">
+    <div id="split-cam-container" style="position:absolute;top:16px;left:0;width:100%;display:none;justify-content:space-between;pointer-events:none;z-index:20;">
         <canvas id="cam-left"  width="220" height="165" style="position:static;width:220px;height:165px;border-radius:12px;border:3px solid rgba(239,68,68,0.7);opacity:0.85;margin-left:16px;"></canvas>
         <canvas id="cam-right" width="220" height="165" style="position:static;width:220px;height:165px;border-radius:12px;border:3px solid rgba(59,130,246,0.7);opacity:0.85;margin-right:16px;"></canvas>
     </div>
@@ -289,6 +334,7 @@
     <canvas id="game-canvas"></canvas>
 
     <audio id="bg-music" loop preload="auto"></audio>
+    <audio id="warning-audio" preload="none" src="safetywarning.mp3"></audio>
     <script>
     const musicPlaylist = [
       "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
@@ -350,7 +396,7 @@
                     <p class="text-3xl font-black text-cyan-900 dark:text-white" id="p2-shields">0</p>
                 </div>
                 <div class="bg-rose-100/80 dark:bg-rose-700/60 rounded-lg p-3 text-right">
-                    <p class="text-rose-700 dark:text-rose-200 text-2xl font-black uppercase tracking-wide" id="p2-hud-name">Player 2</p>
+                    <p class="text-rose-700 dark:text-rose-200 text-[1.95rem] font-black uppercase tracking-wide" id="p2-hud-name">Player 2</p>
                     <p class="text-lg font-black text-rose-900 dark:text-white"><span id="p2-squats">0</span> Squats</p>
                     <p class="text-lg font-black text-rose-900 dark:text-white"><span id="p2-jumps">0</span> Jumps</p>
                     <p class="text-base font-bold text-orange-600 dark:text-yellow-400"><span id="p2-calories">0.0</span> kcal</p>
@@ -371,7 +417,7 @@
                     <p class="text-3xl font-black text-cyan-900 dark:text-white" id="p1-shields">0</p>
                 </div>
                 <div class="bg-indigo-100/80 dark:bg-indigo-700/60 rounded-lg p-3 text-right">
-                    <p class="text-indigo-700 dark:text-indigo-200 text-2xl font-black uppercase tracking-wide" id="p1-hud-name">Player 1</p>
+                    <p class="text-indigo-700 dark:text-indigo-200 text-[1.95rem] font-black uppercase tracking-wide" id="p1-hud-name">Player 1</p>
                     <p class="text-lg font-black text-indigo-900 dark:text-white"><span id="p1-squats">0</span> Squats</p>
                     <p class="text-lg font-black text-indigo-900 dark:text-white"><span id="p1-jumps">0</span> Jumps</p>
                     <p class="text-base font-bold text-orange-600 dark:text-yellow-400"><span id="p1-calories">0.0</span> kcal</p>
@@ -379,21 +425,19 @@
             </div>
         </div>
 
-        <!-- Splash (before login) -->
-        <div id="splash-screen" class="login-ui" aria-busy="true">
-            <div class="splash-loading-block" role="status" aria-label="Loading">
-                <div class="splash-spinner" aria-hidden="true"></div>
-                <p class="splash-loading-text">Loading....</p>
-            </div>
-        </div>
-
         <!-- Login (full-screen Kia Kaha onboarding) -->
         <div id="login-screen-wrap" class="login-ui">
             <div id="login-screen">
-                <header class="relative mb-6">
-                    <div class="flex items-start justify-between gap-3 mb-4">
-                        <p id="txt-login-brand" class="login-brand login-teal">ACTIVE RUNNER</p>
-                        <div class="flex items-center gap-3 shrink-0">
+                <header class="relative mb-5">
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <div>
+                            <p class="login-teal" style="font-size:clamp(2.5rem,6vw,3.25rem);font-weight:900;line-height:1.15;letter-spacing:0.04em;text-transform:uppercase;">ACTIVE RUNNER</p>
+                            <h1 class="login-title mb-0">
+                                <span id="txt-login-kia" class="text-gray-900 dark:text-white">Kia</span>
+                                <span id="txt-login-kaha" class="login-coral"> Kaha</span>
+                            </h1>
+                        </div>
+                        <div class="flex flex-col items-end gap-2 shrink-0">
                             <button type="button" id="login-theme-toggle" class="w-[3.25rem] h-[3.25rem] rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm transition transform hover:scale-105 active:scale-95" aria-label="Toggle theme" title="Theme">
                                 <svg id="login-theme-icon-light" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true">
                                     <circle cx="12" cy="12" r="4"></circle>
@@ -403,20 +447,13 @@
                                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                                 </svg>
                             </button>
+                            <svg class="login-koru-btn w-[73px] h-[73px] opacity-60" viewBox="0 0 52 52" aria-hidden="true">
+                                <path class="stem" d="M26 46 L26 52"/>
+                                <path d="M26 46 C26 46 26 36 26 30 C26 18 16 10 10 14 C4 18 3 26 7 32 C11 38 18 40 23 37 C28 34 30 28 27 23 C24 18 18 17 15 21 C12 25 13 31 17 33 C21 35 25 33 26 29"/>
+                            </svg>
                         </div>
                     </div>
-                    <h1 class="login-title mb-2">
-                        <span id="txt-login-kia" class="text-gray-900 dark:text-white">Kia</span>
-                        <span id="txt-login-kaha" class="login-coral"> Kaha</span>
-                    </h1>
-                    <p id="txt-login-subtitle" class="login-subtitle login-teal mb-5">To Care for Our Elders</p>
-                    <div class="flex gap-4 items-stretch mb-6">
-                        <div class="w-1.5 rounded-full bg-[#ff8a65] shrink-0" aria-hidden="true"></div>
-                        <div>
-                            <p id="txt-login-quote1" class="login-quote1 text-gray-700 dark:text-gray-200">"Be strong, be brave, be steadfast"</p>
-                            <p id="txt-login-quote2" class="login-quote2 text-gray-600 dark:text-gray-300 mt-2">Move well, live well, stand tall.</p>
-                        </div>
-                    </div>
+                    <p id="txt-login-subtitle" class="login-subtitle login-teal mb-5">To Care for Kaumātua</p>
                     <hr class="border-gray-200 dark:border-gray-600" />
                 </header>
 
@@ -458,9 +495,10 @@
         <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto z-20" id="center-screens">
 
             <!-- DAILY STREAK SCREEN -->
-            <div id="streak-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-indigo-500/40 text-center max-w-xl w-[90%] shadow-2xl backdrop-blur-md hidden">
+            <div id="streak-screen" class="relative bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl card-teal text-center max-w-xl w-[90%] backdrop-blur-md hidden">
+                <button id="btn-streak-back" class="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-500 dark:hover:border-gray-300 hover:text-gray-800 dark:hover:text-gray-100 text-xl font-bold transition hover:scale-105 active:scale-95">←</button>
                 <!-- Title -->
-                <div class="flex items-center justify-center gap-3 mb-2">
+                <div class="flex items-center justify-center gap-3 mb-2 mt-2">
                     <span class="text-4xl">🔥</span>
                     <h1 class="text-4xl font-black text-indigo-600 dark:text-indigo-400">Daily Play Streak</h1>
                 </div>
@@ -474,23 +512,19 @@
                 <!-- Day dots -->
                 <div class="flex justify-center gap-8 mb-6">
                     <div class="flex flex-col items-center gap-2">
-                        <div id="dot-2ago" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400">○</div>
+                        <div id="dot-2ago" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400"></div>
                         <span class="text-sm font-bold text-gray-500">2 days ago</span>
                     </div>
                     <div class="flex flex-col items-center gap-2">
-                        <div id="dot-yesterday" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400">○</div>
+                        <div id="dot-yesterday" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400"></div>
                         <span class="text-sm font-bold text-gray-500">Yesterday</span>
                     </div>
                     <div class="flex flex-col items-center gap-2">
-                        <div id="dot-today" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-green-500 bg-green-500/20 text-white">✓</div>
+                        <div id="dot-today" class="w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-green-500 bg-green-500/20 text-green-600">✓</div>
                         <span class="text-sm font-bold text-gray-500">Today</span>
                     </div>
                 </div>
 
-                <!-- Warning -->
-                <div class="bg-indigo-50 border-2 border-indigo-400 rounded-2xl px-6 py-4 mb-6">
-                    <p class="text-indigo-700 font-black text-xl">⚠️ Miss a day and your streak resets to 0!</p>
-                </div>
 
                 <!-- Next button -->
                 <button id="btn-streak-next" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl">
@@ -499,14 +533,15 @@
             </div>
 
             <!-- DASHBOARD SCREEN -->
-            <div id="dashboard-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-indigo-500/40 text-center max-w-xl w-[95%] shadow-2xl backdrop-blur-md hidden mt-4 mb-4">
+            <div id="dashboard-screen" class="relative bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl card-teal text-center max-w-xl w-[95%] backdrop-blur-md hidden mt-4 mb-4">
+                <button id="btn-dashboard-back" class="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-500 dark:hover:border-gray-300 hover:text-gray-800 dark:hover:text-gray-100 text-xl font-bold transition hover:scale-105 active:scale-95">←</button>
                 <h1 id="txt-hello" class="text-4xl md:text-5xl font-black mb-8 text-gray-900 dark:text-white">Hello, </h1>
                 
                 <div class="flex flex-col gap-4">
                     <!-- 1P / 2P toggle -->
                     <div class="flex gap-3">
                         <button id="btn-mode-1p" class="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl border-4 border-indigo-400 transform transition hover:scale-105 active:scale-95 text-2xl">👤 1 Player</button>
-                        <button id="btn-mode-2p" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-black py-4 rounded-2xl border-4 border-transparent transform transition hover:scale-105 active:scale-95 text-2xl">👥 2 Player</button>
+                        <button id="btn-mode-2p" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-black py-4 rounded-2xl border-4 border-transparent transform transition hover:scale-105 active:scale-95 text-2xl">⚔️ 2 Player</button>
                     </div>
 
                     <!-- P2 name input shown in 2P mode -->
@@ -532,7 +567,7 @@
             </div>
 
             <!-- Loading AI -->
-            <div id="loading-screen" class="bg-white/95 dark:bg-gray-900/90 p-8 rounded-3xl border-4 border-gray-300 dark:border-gray-700 text-center max-w-md w-[90%] backdrop-blur-md hidden shadow-2xl">
+            <div id="loading-screen" class="bg-white/95 dark:bg-gray-900/90 p-8 rounded-3xl card-teal text-center max-w-md w-[90%] backdrop-blur-md hidden">
                 <div class="animate-spin inline-block w-16 h-16 border-[6px] border-current border-t-transparent text-indigo-600 dark:text-indigo-500 rounded-full mb-6"></div>
                 <h1 class="text-4xl font-black mb-4 bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400 bg-clip-text text-transparent">Active Runner</h1>
                 <p id="txt-loading-ai" class="text-2xl text-gray-700 dark:text-gray-300 font-bold">Loading AI Engine...</p>
@@ -540,12 +575,23 @@
             </div>
 
             <!-- Warning screen -->
-            <div id="warning-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 md:p-10 rounded-3xl border-4 border-amber-500/60 text-left max-w-2xl w-[90%] backdrop-blur-md hidden shadow-2xl">
-                <h2 id="txt-warning-title" class="text-4xl md:text-5xl font-black text-amber-600 dark:text-amber-400 mb-6 border-b-2 border-amber-200 dark:border-amber-900 pb-2">Safety Warning</h2>
+            <div id="warning-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 md:p-10 rounded-3xl card-teal text-left max-w-2xl w-[90%] backdrop-blur-md hidden">
+                <button id="btn-warning-back" class="w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-500 dark:hover:border-gray-300 hover:text-gray-800 dark:hover:text-gray-100 text-xl font-bold transition hover:scale-105 active:scale-95 mb-4">←</button>
+                <div class="flex items-center justify-between mb-6 border-b-2 border-amber-200 dark:border-amber-900 pb-2">
+                    <h2 id="txt-warning-title" class="text-4xl md:text-5xl font-black text-amber-600 dark:text-amber-400">Safety Warning</h2>
+                    <button type="button" id="warning-read-btn" title="Play safety warning audio" aria-label="Play safety warning audio"
+                        class="flex-shrink-0 w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/50 border-2 border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 flex items-center justify-center transition hover:bg-amber-200 dark:hover:bg-amber-800 hover:scale-105 active:scale-95">
+                        <svg id="warning-read-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                        </svg>
+                    </button>
+                </div>
                 <p id="txt-warning-1" class="text-gray-800 dark:text-amber-50 text-2xl font-semibold leading-relaxed mb-6">
                     Please play in a clear, dry, non-slip area with enough room to move both arms.
                 </p>
-                <ul class="text-gray-700 dark:text-amber-100/95 text-xl font-medium leading-relaxed space-y-4 mb-8 list-disc pl-6">
+                <ul class="text-gray-700 dark:text-amber-100/95 text-2xl font-semibold leading-relaxed space-y-4 mb-8 list-none pl-0">
                     <li id="txt-warning-2">Go at your own pace and hold nearby support if needed.</li>
                     <li id="txt-warning-3">Stop immediately if you feel dizzy, unsteady, short of breath, or any pain.</li>
                 </ul>
@@ -555,13 +601,10 @@
             </div>
 
             <!-- How to play (5 steps) -->
-            <div id="instructions-screen" class="hidden fixed inset-0 z-40 flex flex-col bg-slate-100/95 dark:bg-[#1a202c]/95 backdrop-blur-md text-gray-900 dark:text-white pointer-events-auto p-4 md:p-6 min-h-0">
-                <div class="w-full max-w-5xl mx-auto flex flex-col flex-1 min-h-0 bg-white/95 dark:bg-gray-900/95 rounded-3xl border-4 border-indigo-500/40 shadow-2xl backdrop-blur-md overflow-hidden">
-                <header class="text-center pt-6 md:pt-8 pb-4 px-6 pr-28 md:pr-36 shrink-0 border-b-2 border-gray-200 dark:border-gray-700 relative">
+            <div id="instructions-screen" class="hidden fixed inset-0 z-40 flex flex-col bg-[#e8f4ef]/90 dark:bg-[#0a1f14]/90 backdrop-blur-md text-gray-900 dark:text-white pointer-events-auto p-4 md:p-6 min-h-0">
+                <div class="w-full max-w-5xl mx-auto flex flex-col flex-1 min-h-0 bg-white/95 dark:bg-gray-900/95 rounded-3xl card-teal backdrop-blur-md overflow-hidden">
+                <header class="text-center pt-6 md:pt-8 pb-4 px-6 pr-16 md:pr-20 shrink-0 border-b-2 border-gray-200 dark:border-gray-700 relative">
                     <div class="instruction-header-actions absolute top-4 right-4 md:top-6 md:right-6 z-10 flex flex-col items-end gap-1.5">
-                        <button type="button" id="instruction-skip" class="bg-indigo-600 hover:bg-indigo-500 text-white py-3 px-4 md:py-3 md:px-5 text-base md:text-lg whitespace-nowrap">
-                            Skip tutorial
-                        </button>
                         <button type="button" id="instruction-mute" class="flex items-center justify-center" aria-label="Mute voice" aria-pressed="false">
                             <svg id="instruction-mute-icon-on" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -589,18 +632,22 @@
                         </div>
                     </button>
                 </div>
-                <footer class="shrink-0 px-4 md:px-6 pb-6 pt-2">
+                <footer class="shrink-0 px-4 md:px-6 pb-6 pt-2 flex flex-col gap-3">
                     <div class="flex items-center justify-between gap-4 bg-gray-50 dark:bg-gray-800 rounded-2xl px-4 py-4 border-2 border-gray-200 dark:border-gray-700">
                         <button type="button" id="instruction-prev" class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-2xl font-black shadow-lg transition disabled:opacity-30 disabled:pointer-events-none" aria-label="Previous">←</button>
                         <p class="text-xl md:text-2xl font-black tabular-nums text-gray-800 dark:text-gray-200"><span id="instruction-page-current" class="inline-block min-w-[2ch] text-center px-3 py-1 rounded-full bg-indigo-600 text-white">1</span> / <span id="instruction-page-total">5</span></p>
                         <button type="button" id="instruction-next" class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-2xl font-black shadow-lg transition" aria-label="Next">→</button>
                     </div>
+                    <button type="button" id="instruction-skip" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 px-5 rounded-2xl text-base md:text-lg font-black shadow-lg transition hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap">
+                        Skip tutorial
+                    </button>
                 </footer>
                 </div>
             </div>
 
             <!-- Start / Calibrate -->
-            <div id="start-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl border-4 border-green-500/50 text-center max-w-lg w-[90%] backdrop-blur-md hidden shadow-2xl">
+            <div id="start-screen" class="relative bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl card-teal text-center max-w-lg w-[90%] backdrop-blur-md hidden">
+                <button id="btn-start-back" class="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-500 dark:hover:border-gray-300 hover:text-gray-800 dark:hover:text-gray-100 text-xl font-bold transition hover:scale-105 active:scale-95">←</button>
                 <h1 id="txt-ready" class="text-5xl font-black mb-6 text-gray-900 dark:text-white">Ready to move?</h1>
                 <p id="txt-ready-sub" class="text-2xl text-gray-700 dark:text-gray-300 mb-6 font-semibold">Step back so your upper body is visible. Stand still in the center to calibrate.</p>
 
@@ -616,7 +663,8 @@
             </div>
 
             <!-- Calibration Progress -->
-            <div id="calibration-screen" class="bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl border-4 border-yellow-500/50 text-center max-w-lg w-[90%] backdrop-blur-md hidden shadow-2xl">
+            <div id="calibration-screen" class="relative bg-white/95 dark:bg-gray-900/90 p-10 rounded-3xl card-teal text-center max-w-lg w-[90%] backdrop-blur-md hidden">
+                <button id="btn-calibration-back" class="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-500 dark:hover:border-gray-300 hover:text-gray-800 dark:hover:text-gray-100 text-xl font-bold transition hover:scale-105 active:scale-95">←</button>
                 <h2 id="txt-stand-still" class="text-4xl font-black mb-6 text-yellow-600 dark:text-yellow-400">Stand Still...</h2>
                 <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-8 mb-6 border-2 border-gray-300 dark:border-gray-600">
                     <div id="calibration-bar" class="bg-yellow-400 h-full rounded-full transition-all duration-100" style="width: 0%"></div>
@@ -625,44 +673,54 @@
             </div>
 
             <!-- Game Over -->
-            <div id="game-over-screen" class="bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl border-4 border-green-500/60 text-center max-w-2xl w-[90%] backdrop-blur-md hidden shadow-[0_0_50px_rgba(34,197,94,0.3)]" style="max-height:90vh;overflow-y:auto;">
-                <h1 id="txt-game-over" class="text-5xl font-black mb-2 text-green-600 dark:text-green-400">Great Job!</h1>
+            <div id="game-over-screen" class="relative bg-white/95 dark:bg-gray-900/95 p-8 rounded-3xl card-teal text-center max-w-2xl w-[90%] backdrop-blur-md hidden" style="max-height:90vh;overflow-y:auto;">
+                <button id="btn-play-again" title="Play Again" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-green-500 dark:hover:border-green-400 hover:text-green-600 dark:hover:text-green-400 text-xl font-bold transition hover:scale-105 active:scale-95">↺</button>
+                <h1 id="txt-game-over" class="text-4xl font-black mb-2 text-green-600 dark:text-green-400">Great Job!</h1>
 
                 <!-- Winner banner — 2P mode only -->
                 <div id="winner-banner" class="hidden mb-4 bg-yellow-400 rounded-2xl py-3 px-6">
-                    <p class="text-3xl font-black text-gray-900">🏆 <span id="winner-name"></span> wins! — <span id="winner-score" class="text-indigo-700"></span> pts</p>
+                    <p class="text-2xl font-black text-gray-900">🏆 <span id="winner-name"></span> wins! — <span id="winner-score" class="text-indigo-700"></span> pts</p>
                 </div>
 
                 <!-- Score row — single player only -->
-                <div id="score-row" class="flex justify-around gap-4 mb-4">
-                    <div class="flex-1 bg-blue-50 dark:bg-blue-900/40 p-4 rounded-2xl border border-blue-300 dark:border-blue-700">
-                        <p class="text-blue-800 dark:text-blue-300 font-black text-xl uppercase mb-1" id="final-p1-name">Player 1</p>
-                        <p class="text-gray-500 dark:text-gray-400 text-sm">SCORE</p>
-                        <p class="text-4xl font-black text-indigo-600 dark:text-indigo-400" id="final-score">0</p>
+                <div id="score-row" class="mb-4">
+                    <div class="bg-blue-50 dark:bg-blue-900/40 px-6 py-5 rounded-2xl border border-blue-300 dark:border-blue-700 flex items-center justify-between gap-4">
+                        <div>
+                            <p class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl uppercase font-bold tracking-widest mb-1">Player</p>
+                            <p class="text-3xl font-black text-blue-800 dark:text-blue-200 leading-tight" id="final-p1-name">Player 1</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl uppercase font-bold tracking-widest mb-1">Score</p>
+                            <p class="text-6xl font-black text-indigo-600 dark:text-indigo-400 leading-none" id="final-score">0</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Stats row -->
                 <div class="flex flex-col sm:flex-row justify-around gap-4 mb-6">
-                    <div class="flex-1 bg-blue-50 dark:bg-blue-900/40 p-5 rounded-2xl border border-blue-300 dark:border-blue-700">
-                        <p class="text-blue-800 dark:text-blue-300 font-black text-lg uppercase mb-2" id="final-p1-stats-name">Player 1</p>
-                        <div class="flex justify-between text-lg font-bold">
-                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">SQUATS</span> <span id="final-p1-squats" class="text-3xl">0</span></div>
-                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">JUMPS</span> <span id="final-p1-jumps" class="text-3xl">0</span></div>
+                    <div class="relative flex-1 bg-blue-50 dark:bg-blue-900/40 p-5 rounded-2xl border border-blue-300 dark:border-blue-700">
+                        <div class="winner-stamp" id="winner-stamp-p1"><span class="winner-stamp-text">WINNER</span></div>
+                        <p class="text-blue-800 dark:text-blue-300 font-black text-sm uppercase mb-2" id="final-p1-stats-name">Player 1</p>
+                        <div class="flex justify-between text-base font-bold">
+                            <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">SQUATS</span> <span id="final-p1-squats" class="text-2xl">0</span></div>
+                            <div id="final-p1-energy-col" class="text-center"><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">ENERGY</span> <span id="final-p1-energy" class="text-2xl text-orange-600 dark:text-yellow-400 font-black">0.0</span><span class="text-2xl text-gray-400 ml-0.5">kcal</span></div>
+                            <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">JUMPS</span> <span id="final-p1-jumps" class="text-2xl">0</span></div>
                         </div>
                     </div>
-                    <div id="final-p2-container" class="hidden flex-1 bg-red-50 dark:bg-red-900/40 p-5 rounded-2xl border border-red-300 dark:border-red-700">
-                        <p class="text-red-800 dark:text-red-300 font-black text-lg uppercase mb-2" id="final-p2-stats-name">Player 2</p>
-                        <div class="flex justify-between text-lg font-bold">
-                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">SQUATS</span> <span id="final-p2-squats" class="text-3xl">0</span></div>
-                            <div><span class="text-gray-500 dark:text-gray-400 text-sm block">JUMPS</span> <span id="final-p2-jumps" class="text-3xl">0</span></div>
+                    <div id="final-p2-container" class="relative hidden flex-1 bg-red-50 dark:bg-red-900/40 p-5 rounded-2xl border border-red-300 dark:border-red-700">
+                        <div class="winner-stamp" id="winner-stamp-p2"><span class="winner-stamp-text">WINNER</span></div>
+                        <p class="text-red-800 dark:text-red-300 font-black text-sm uppercase mb-2" id="final-p2-stats-name">Player 2</p>
+                        <div class="flex justify-between text-base font-bold">
+                            <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">SQUATS</span> <span id="final-p2-squats" class="text-2xl">0</span></div>
+                            <div id="final-p2-energy-col" class="text-center"><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">ENERGY</span> <span id="final-p2-energy" class="text-2xl text-orange-600 dark:text-yellow-400 font-black">0.0</span><span class="text-2xl text-gray-400 ml-0.5">kcal</span></div>
+                            <div><span class="go-stat-label text-gray-500 dark:text-gray-400 text-2xl block">JUMPS</span> <span id="final-p2-jumps" class="text-2xl">0</span></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Leaderboard inside game over — hidden by default -->
                 <div id="gameover-lb-wrap" class="hidden bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 border-2 border-gray-200 dark:border-gray-700 mb-6 text-left">
-                    <h2 class="text-3xl font-black mb-3 text-gray-800 dark:text-gray-200 border-b-2 border-gray-300 dark:border-gray-600 pb-2">🏆 Top Players</h2>
+                    <h2 class="text-2xl font-black mb-3 text-gray-800 dark:text-gray-200 border-b-2 border-gray-300 dark:border-gray-600 pb-2">🏆 Top Players</h2>
                     <!-- Normal / Chill tabs -->
                     <div class="flex gap-2 mb-4">
                         <button id="go-lb-tab-normal" onclick="switchGOLBTab('normal')" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-xl border-2 border-green-400 text-lg">Normal</button>
@@ -684,10 +742,10 @@
 
                 <!-- Two buttons side by side -->
                 <div class="flex gap-4">
-                    <button id="restart-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl">
+                    <button id="restart-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 px-6 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-xl">
                         Return to Dashboard
                     </button>
-                    <button id="btn-gameover-lb" onclick="toggleGameoverLB()" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-black py-5 px-8 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-3xl">
+                    <button id="btn-gameover-lb" onclick="toggleLeaderboard()" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-black py-4 px-6 rounded-2xl shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] text-xl">
                         🏆 Leaderboard
                     </button>
                 </div>
@@ -695,8 +753,8 @@
                 <!-- Health Tip -->
                 <div id="health-tip-card" class="mt-6 text-left bg-emerald-50 dark:bg-emerald-950/50 border-2 border-emerald-200 dark:border-emerald-800 rounded-2xl p-5 shadow-inner">
                     <p id="txt-health-tip-label" class="text-xs uppercase tracking-widest text-emerald-700 dark:text-emerald-400 font-black mb-2">Health tip</p>
-                    <h3 id="health-tip-title" class="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight"></h3>
-                    <p id="health-tip-body" class="text-lg md:text-xl text-gray-700 dark:text-gray-300 font-medium leading-relaxed"></p>
+                    <h3 id="health-tip-title" class="text-[1.625rem] md:text-[1.95rem] font-black text-gray-900 dark:text-white mb-2 leading-tight"></h3>
+                    <p id="health-tip-body" class="text-[1.3rem] text-gray-700 dark:text-gray-300 font-bold leading-relaxed"></p>
                     <p id="txt-health-tip-source" class="mt-4 text-sm md:text-base text-emerald-800/75 dark:text-emerald-300/80 font-semibold text-right">Source: NZ Ministry of Health</p>
                 </div>
 
@@ -715,7 +773,7 @@
 
         <!-- Streak Bonus Banner -->
         <div id="streak-bonus-banner" class="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-none hidden z-50 bg-cyan-500/95 dark:bg-cyan-600/95 border-4 border-cyan-300 rounded-2xl px-8 py-4 shadow-2xl text-center">
-            <p class="text-white font-black text-2xl">🔥 3-Day Streak! 🛡️ +5 Shields Bonus!</p>
+            <p id="streak-bonus-text" class="text-white font-black text-2xl"></p>
         </div>
 
         <!-- Shield Active Overlay (shown on canvas via JS, this just shows the rest-mode text hint) -->
@@ -728,9 +786,12 @@
     </div>
 </div>
 
+<!-- Background intro overlay -->
+<div id="bg-intro"></div>
+
 <!-- ===== LEADERBOARD MODAL ===== -->
 <div id="lb-modal" class="fixed inset-0 z-[100] items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-auto" style="display:none;">
-    <div class="bg-white dark:bg-gray-900 rounded-3xl border-4 border-indigo-400 shadow-2xl w-[90%] max-w-lg p-8">
+    <div class="bg-white/95 dark:bg-gray-900/95 rounded-3xl card-teal backdrop-blur-md w-[90%] max-w-lg p-8">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-3xl font-black text-gray-800 dark:text-gray-200">🏆 Top Players</h2>
             <button onclick="toggleLeaderboard()" class="text-gray-400 hover:text-gray-800 dark:hover:text-white text-3xl font-black leading-none w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition">✕</button>
@@ -766,7 +827,7 @@ let numPlayers = 1;
 const translations = {
     en: {
         themeDark: "Dark Theme", themeLight: "Light Theme",
-        loginBrand: "ACTIVE RUNNER", loginSubtitle: "To Care for Our Elders",
+        loginBrand: "ACTIVE RUNNER", loginSubtitle: "To Care for Kaumātua",
         loginQuote1: "\"Be strong, be brave, be steadfast\"",
         loginQuote2: "Move well, live well, stand tall.",
         loginNameLabel: "YOUR NAME", loginLangLabel: "LANGUAGE",
@@ -840,7 +901,7 @@ const translations = {
 
 const elementsToTranslate = {
     'txt-theme-dark': 'themeDark', 'txt-theme-light': 'themeLight',
-    'txt-login-brand': 'loginBrand', 'txt-login-subtitle': 'loginSubtitle',
+    'txt-login-subtitle': 'loginSubtitle',
     'txt-login-quote1': 'loginQuote1', 'txt-login-quote2': 'loginQuote2',
     'txt-login-name-label': 'loginNameLabel', 'txt-login-lang-label': 'loginLangLabel',
     'txt-welcome': 'welcome', 'txt-instruction': 'instruction',
@@ -1085,12 +1146,35 @@ function getLBKey() {
     return speedMultiplier < 1 ? 'game_leaderboard_chill' : 'game_leaderboard_normal';
 }
 
-function getLeaderboard() {
-    const defaultBoard = [
-        { name: "WaikatoChamp", score: 850 }, { name: "Sarah123", score: 620 }, { name: "TeKauri", score: 430 }
+// Reset both leaderboards to fresh mock data
+(function resetLeaderboards() {
+    localStorage.removeItem('game_leaderboard_normal');
+    localStorage.removeItem('game_leaderboard_chill');
+})();
+
+function getDefaultBoard(key) {
+    if (key === 'game_leaderboard_chill') {
+        return [
+            { name: "MargaretW",  score: 94 },
+            { name: "RonaldB",    score: 76 },
+            { name: "DorisK",     score: 58 },
+            { name: "HelenT",     score: 43 },
+            { name: "FrankM",     score: 29 }
+        ];
+    }
+    return [
+        { name: "WaikatoChamp", score: 187 },
+        { name: "Sarah123",     score: 162 },
+        { name: "TeKauri",      score: 134 },
+        { name: "HinaM",        score: 109 },
+        { name: "JakeR",        score: 88  }
     ];
-    const stored = localStorage.getItem(getLBKey());
-    return stored ? JSON.parse(stored) : defaultBoard;
+}
+
+function getLeaderboard() {
+    const key = getLBKey();
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : getDefaultBoard(key);
 }
 
 function saveScore(newScore) {
@@ -1109,11 +1193,8 @@ function renderLeaderboard() {
     tbody.innerHTML = '';
     // Show the tab that's selected, not the current game mode
     const key = lbViewTab === 'chill' ? 'game_leaderboard_chill' : 'game_leaderboard_normal';
-    const defaultBoard = [
-        { name: "WaikatoChamp", score: 850 }, { name: "Sarah123", score: 620 }, { name: "TeKauri", score: 430 }
-    ];
     const stored = localStorage.getItem(key);
-    const board = stored ? JSON.parse(stored) : defaultBoard;
+    const board = stored ? JSON.parse(stored) : getDefaultBoard(key);
     board.forEach((player, index) => {
         const tr = document.createElement('tr');
         tr.className = "border-b border-gray-200 dark:border-gray-700 last:border-0";
@@ -1129,11 +1210,8 @@ function renderGameOverLeaderboard() {
     if (!tbody) return;
     tbody.innerHTML = '';
     const key = goLBTab === 'chill' ? 'game_leaderboard_chill' : 'game_leaderboard_normal';
-    const defaultBoard = [
-        { name: "WaikatoChamp", score: 850 }, { name: "Sarah123", score: 620 }, { name: "TeKauri", score: 430 }
-    ];
     const stored = localStorage.getItem(key);
-    const board = stored ? JSON.parse(stored) : defaultBoard;
+    const board = stored ? JSON.parse(stored) : getDefaultBoard(key);
     board.forEach((player, index) => {
         const isCurrentPlayer = (player.name === currentPlayerName || player.name === currentPlayer2Name);
         const tr = document.createElement('tr');
@@ -1175,6 +1253,7 @@ let gameState = 'login';
 let score = 0, speed = 4, frameCount = 0, obstacles = [], gameLoopId;
 let speedMultiplier = 1; // 1 = Normal, 0.25 = Chill
 let levelUpTimer = 0, nextMilestone = 100;
+let skyEffectsEnabled = false, skyStarBase = [], skyParticles = [], skyStyle = 0;
 const CALIBRATION_REQUIRED_FRAMES = 60; 
 
 // ORB SYSTEM
@@ -1305,7 +1384,7 @@ function showCameraForMode() {
 }
 
 function predictWebcam() {
-    if (gameState === 'playing' || gameState === 'calibrating') {
+    if (gameState === 'playing' || gameState === 'calibrating' || gameState === 'pre-calibrating') {
         let startTimeMs = performance.now();
         if (lastVideoTime !== videoElement.currentTime && poseLandmarker) {
             lastVideoTime = videoElement.currentTime;
@@ -1320,27 +1399,56 @@ function predictWebcam() {
 
 function onPoseResults(results) {
     if (!results.landmarks || results.landmarks.length === 0) return;
-    // Sort DESCENDING so poses[0] = left side of room (right side of raw video)
-    // lower X in raw video = right side of room = P2 (right board)
-    let poses = [...results.landmarks];
-    poses.sort((a, b) => b[0].x - a[0].x);  // highest X first = left side of room
+
+    // Hip midpoint is far more stable than nose for horizontal tracking
+    function getPoseX(pose) {
+        if (pose[23] && pose[24]) return (pose[23].x + pose[24].x) / 2;
+        return pose[0].x; // fallback to nose
+    }
+
+    // Sort descending: highest raw-X = left side of room = P1
+    let rawPoses = [...results.landmarks];
+    rawPoses.sort((a, b) => getPoseX(b) - getPoseX(a));
+
+    // In 2P with both poses visible + homeX established: Hungarian match to prevent swap flicker
+    let poses = rawPoses;
+    if (numPlayers === 2 && rawPoses.length >= 2 &&
+        players[0].homeX !== undefined && players[1].homeX !== undefined) {
+        const x0 = getPoseX(rawPoses[0]), x1 = getPoseX(rawPoses[1]);
+        const costNormal  = Math.abs(x0 - players[0].homeX) + Math.abs(x1 - players[1].homeX);
+        const costSwapped = Math.abs(x1 - players[0].homeX) + Math.abs(x0 - players[1].homeX);
+        if (costSwapped < costNormal) poses = [rawPoses[1], rawPoses[0]];
+    }
 
     if (gameState === 'calibrating') {
-        if (poses.length < numPlayers) {
-            document.getElementById('txt-learning').innerText = `Waiting for ${numPlayers} player(s) to be in frame...`;
+        if (poses.length < 1) {
+            document.getElementById('txt-learning').innerText = `Waiting for player to be in frame...`;
             return;
         }
-        document.getElementById('txt-learning').innerText = "Learning your neutral pose...";
-        let validFrames = 0;
-        for (let i = 0; i < numPlayers; i++) {
-            let avgShoulderY = (poses[i][11].y + poses[i][12].y) / 2;
-            players[i].baseline += avgShoulderY;
-            players[i].calibrationFrames++;
-            validFrames = players[i].calibrationFrames;
+        if (numPlayers === 2 && poses.length < 2) {
+            document.getElementById('txt-learning').innerText = `Calibrating P1 — P2 not detected (will be uncontrolled)`;
+        } else {
+            document.getElementById('txt-learning').innerText = "Learning your neutral pose...";
         }
+        for (let i = 0; i < numPlayers; i++) {
+            if (!poses[i]) continue;
+            const avgShoulderY = (poses[i][11].y + poses[i][12].y) / 2;
+            players[i].baseline += avgShoulderY;
+            players[i].homeXSum = (players[i].homeXSum || 0) + getPoseX(poses[i]);
+            players[i].calibrationFrames++;
+        }
+        const validFrames = players[0].calibrationFrames;
         document.getElementById('calibration-bar').style.width = `${(validFrames/CALIBRATION_REQUIRED_FRAMES)*100}%`;
         if (validFrames >= CALIBRATION_REQUIRED_FRAMES) {
-            for (let i =  0; i < numPlayers; i++) players[i].baseline /= CALIBRATION_REQUIRED_FRAMES;
+            for (let i = 0; i < numPlayers; i++) {
+                if (players[i].calibrationFrames > 0) {
+                    players[i].baseline /= players[i].calibrationFrames;
+                    players[i].homeX = players[i].homeXSum / players[i].calibrationFrames;
+                } else {
+                    players[i].baseline = 0.4;
+                    players[i].homeX = i === 0 ? 0.75 : 0.25; // sensible fallback
+                }
+            }
             startGameplay();
         }
     } else if (gameState === 'playing') {
@@ -1378,7 +1486,7 @@ function handlePlayerMovement(player, landmarks) {
     if (player.restCooldown > 0) player.restCooldown--;
 
     const squatThreshold = 0.10, armLevelThreshold = 0.15, armsUpThreshold = -0.15;
-    
+
     let wasSquatting = player.isSquatting, wasJumping = player.isJumping;
     let wasResting = player.isResting;
     player.isSquatting = false; player.isJumping = false; player.isResting = false;
@@ -1399,10 +1507,10 @@ function handlePlayerMovement(player, landmarks) {
 
     if (armsCrossed) {
         player.isResting = true;
-        if (player.shieldOrbs > 0 && !player.shieldActive) {
+        if (player.shieldOrbs >= 5 && !player.shieldActive) {
             player.shieldActive = true;
-            player.shieldTimer  = 1800;
-            player.shieldOrbs--;
+            player.shieldTimer  = 300;
+            player.shieldOrbs -= 5;
             updateHUD();
             playSynth('shield');
         }
@@ -1416,6 +1524,8 @@ function handlePlayerMovement(player, landmarks) {
         if (!wasJumping) { player.stats.jumps++; updateHUD(); playSynth('jump'); }
     } else if (bothArmsLevel || shoulderY > player.baseline + squatThreshold) {
         player.isSquatting = true;
+        // Keep actionCooldown refreshed during squat so arm-drop after duck can't misfire a lane move
+        player.actionCooldown = Math.max(player.actionCooldown, 25);
         if (!wasSquatting) { player.stats.squats++; updateHUD(); playSynth('squat'); }
     }
 
@@ -1502,7 +1612,16 @@ document.getElementById('btn-continue').addEventListener('click', () => {
     localStorage.setItem('player_name', name);
 
     // Calculate streak first
-    const streak = calculateStreak();
+    let streak = calculateStreak();
+
+    // Default streak to 3 for known users
+    const defaultStreakUsers = ['bin', 'pavani', 'simin', 'moosa'];
+    if (defaultStreakUsers.includes(name.toLowerCase()) && streak < 3) {
+        streak = 3;
+        localStorage.setItem('current_streak', 3);
+        const streakNumberEl = document.getElementById('streak-number');
+        if (streakNumberEl) streakNumberEl.textContent = 3;
+    }
 
     // Build streak screen
     document.getElementById('streak-big-number').textContent = streak;
@@ -1515,25 +1634,56 @@ document.getElementById('btn-continue').addEventListener('click', () => {
     const dot2 = document.getElementById('dot-2ago');
     const dotY = document.getElementById('dot-yesterday');
     if (streak >= 3) {
-        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-yellow-400 bg-yellow-400/20 text-white'; dot2.textContent = '✓';
-        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-yellow-400 bg-yellow-400/20 text-white'; dotY.textContent = '✓';
+        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-green-500 bg-green-500/20 text-green-600'; dot2.textContent = '✓';
+        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-green-500 bg-green-500/20 text-green-600'; dotY.textContent = '✓';
     } else if (streak >= 2) {
-        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dot2.textContent = '○';
-        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-yellow-400 bg-yellow-400/20 text-white'; dotY.textContent = '✓';
+        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dot2.textContent = '';
+        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-green-500 bg-green-500/20 text-green-600'; dotY.textContent = '✓';
     } else {
-        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dot2.textContent = '○';
-        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dotY.textContent = '○';
+        dot2.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dot2.textContent = '';
+        dotY.className = 'w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black border-gray-400 text-gray-400'; dotY.textContent = '';
     }
 
     // Show streak screen
     document.getElementById('login-screen-wrap').classList.add('hidden');
     document.getElementById('streak-screen').classList.remove('hidden');
     gameState = 'dashboard';
+    if (streak >= 3 && typeof startFireworks === 'function') startFireworks();
+});
+
+// ── Back button navigation ──
+document.getElementById('btn-streak-back').addEventListener('click', () => {
+    document.getElementById('streak-screen').classList.add('hidden');
+    document.getElementById('login-screen-wrap').classList.remove('hidden');
+    if (typeof stopFireworks === 'function') stopFireworks();
+});
+
+document.getElementById('btn-dashboard-back').addEventListener('click', () => {
+    document.getElementById('dashboard-screen').classList.add('hidden');
+    document.getElementById('login-screen-wrap').classList.remove('hidden');
+});
+
+document.getElementById('btn-warning-back').addEventListener('click', () => {
+    stopWarningAudio();
+    document.getElementById('warning-screen').classList.add('hidden');
+    document.getElementById('dashboard-screen').classList.remove('hidden');
+});
+
+document.getElementById('btn-start-back').addEventListener('click', () => {
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('dashboard-screen').classList.remove('hidden');
+});
+
+document.getElementById('btn-calibration-back').addEventListener('click', () => {
+    gameState = 'loading';
+    document.getElementById('calibration-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
 });
 
 document.getElementById('btn-streak-next').addEventListener('click', () => {
     document.getElementById('streak-screen').classList.add('hidden');
     document.getElementById('dashboard-screen').classList.remove('hidden');
+    if (typeof stopFireworks === 'function') stopFireworks();
     updateLanguage(document.getElementById('lang-select').value);
     renderLeaderboard();
 });
@@ -1557,9 +1707,12 @@ document.getElementById('btn-play').addEventListener('click', () => {
 });
 
 document.getElementById('warning-continue-btn').addEventListener('click', () => {
+    stopWarningAudio();
     document.getElementById('warning-screen').classList.add('hidden');
     showInstructionsScreen();
 });
+
+document.getElementById('warning-read-btn').addEventListener('click', toggleWarningRead);
 
 document.getElementById('instruction-advance').addEventListener('click', advanceInstruction);
 document.getElementById('instruction-next').addEventListener('click', (e) => { e.stopPropagation(); advanceInstruction(); });
@@ -1572,9 +1725,11 @@ document.getElementById('start-btn').addEventListener('click', () => {
     bgMusic.play().then(() => { bgMusic.pause(); bgMusic.currentTime = 0; }).catch(e => console.log(e));
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('calibration-screen').classList.remove('hidden');
-    gameState = 'calibrating';
-    for (let i=0; i<numPlayers; i++) { players[i].baseline = 0; players[i].calibrationFrames = 0; }
     document.getElementById('calibration-bar').style.width = '0%';
+    for (let i=0; i<numPlayers; i++) { players[i].baseline = 0; players[i].calibrationFrames = 0; players[i].homeX = undefined; players[i].homeXSum = 0; }
+    document.getElementById('txt-learning').innerText = 'Get ready…';
+    gameState = 'pre-calibrating';
+    setTimeout(() => { gameState = 'calibrating'; }, 1000);
 });
 
 // Toggle leaderboard on game over screen
@@ -1634,7 +1789,10 @@ function toggleLeaderboard() {
 }
 
 document.getElementById('restart-btn').addEventListener('click', () => {
+    document.getElementById('game-over-screen').classList.remove('mode-2p');
     document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('winner-stamp-p1').classList.remove('show');
+    document.getElementById('winner-stamp-p2').classList.remove('show');
     document.getElementById('dashboard-screen').classList.remove('hidden');
     document.getElementById('shield-active-hud').classList.add('hidden');
     videoElement.classList.add('hidden');
@@ -1650,6 +1808,28 @@ document.getElementById('restart-btn').addEventListener('click', () => {
     gameState = 'dashboard';
     drawStaticBackground();
     renderLeaderboard();
+});
+
+document.getElementById('btn-play-again').addEventListener('click', () => {
+    // Reset game-over screen state
+    document.getElementById('game-over-screen').classList.remove('mode-2p');
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('winner-stamp-p1').classList.remove('show');
+    document.getElementById('winner-stamp-p2').classList.remove('show');
+    if (document.getElementById('winner-banner')) document.getElementById('winner-banner').classList.add('hidden');
+    document.getElementById('gameover-lb-wrap').classList.add('hidden');
+    document.getElementById('shield-active-hud').classList.add('hidden');
+    // Jump straight to calibration — skip warning & tutorial
+    document.getElementById('calibration-screen').classList.remove('hidden');
+    document.getElementById('calibration-bar').style.width = '0%';
+    for (let i = 0; i < numPlayers; i++) {
+        players[i].baseline = 0; players[i].calibrationFrames = 0;
+        players[i].homeX = undefined; players[i].homeXSum = 0;
+    }
+    document.getElementById('txt-learning').innerText = 'Get ready…';
+    audioCtx.resume();
+    gameState = 'pre-calibrating';
+    setTimeout(() => { gameState = 'calibrating'; }, 1000);
 });
 
 /**
@@ -1671,6 +1851,107 @@ function drawBackground(canvasW) {
     const isDark = document.documentElement.classList.contains('dark');
     ctx.fillStyle = isDark ? '#0f172a' : '#bae6fd'; ctx.fillRect(0, 0, canvasW, horizonY);
     ctx.fillStyle = isDark ? '#1e293b' : '#bbf7d0'; ctx.fillRect(0, horizonY, canvasW, gameHeight - horizonY);
+
+    // ── Sky visual effects (active from game start, style upgrades every 100 pts) ──
+    if (skyEffectsEnabled) {
+        // Style 1+: Flowing aurora bands
+        if (skyStyle >= 1) {
+            const aurCols = isDark
+                ? ['rgba(42,157,143,', 'rgba(99,102,241,', 'rgba(139,92,246,']
+                : ['rgba(80,200,170,',  'rgba(130,160,255,', 'rgba(190,140,255,'];
+            const bandCount = skyStyle >= 3 ? 4 : 3;
+            for (let b = 0; b < bandCount; b++) {
+                const baseY = horizonY * (0.15 + b * 0.18);
+                const t2 = frameCount * 0.012 + b * 1.8;
+                const opacity = (0.12 + Math.sin(frameCount * 0.018 + b) * 0.07) * (skyStyle >= 3 ? 1.5 : 1);
+                ctx.beginPath();
+                for (let x = 0; x <= canvasW; x += 20) {
+                    const y = baseY + Math.sin(x * 0.007 + t2) * 14 + Math.sin(x * 0.014 + t2 * 1.4) * 7;
+                    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+                ctx.strokeStyle = aurCols[b % aurCols.length] + opacity + ')';
+                ctx.lineWidth = 10 + skyStyle * 2;
+                ctx.stroke();
+            }
+        }
+
+        // Twinkling stars — colorful from style 2+
+        skyStarBase.forEach(s => {
+            s.twinkle += 0.055;
+            const alpha = 0.55 + Math.sin(s.twinkle) * 0.45; // 0.1–1.0
+            const sx = s.x * canvasW / gameWidth;
+            const radius = s.r * 1.8 * (skyStyle >= 3 ? 1.5 : 1);
+            const hueVal = (s.hue + frameCount * 0.3) % 360;
+            const col = skyStyle >= 2
+                ? `hsla(${hueVal},100%,${isDark ? 92 : 97}%,${Math.max(0, alpha)})`
+                : isDark ? `rgba(255,255,220,${Math.max(0, alpha)})` : `rgba(255,255,255,${Math.max(0, alpha)})`;
+            // Fake glow: outer soft halo (no shadowBlur — much cheaper)
+            ctx.beginPath();
+            ctx.arc(sx, s.y, radius * 3, 0, Math.PI * 2);
+            ctx.fillStyle = skyStyle >= 2
+                ? `hsla(${hueVal},100%,80%,${Math.max(0, alpha * 0.18)})`
+                : isDark ? `rgba(200,230,255,${Math.max(0, alpha * 0.18)})` : `rgba(255,255,255,${Math.max(0, alpha * 0.15)})`;
+            ctx.fill();
+            // Core star
+            ctx.beginPath();
+            ctx.arc(sx, s.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = col;
+            ctx.fill();
+        });
+
+        // Shooting stars — rate and colour change with style
+        const spawnRate = skyStyle >= 3 ? 0.04 : skyStyle >= 1 ? 0.025 : 0.015;
+        if (Math.random() < spawnRate) {
+            const hue = skyStyle >= 2 ? Math.floor(Math.random() * 360) : null;
+            skyParticles.push({
+                x:    Math.random() * canvasW * 0.65,
+                y:    Math.random() * horizonY * 0.5,
+                vx:   9 + Math.random() * 8,
+                vy:   2 + Math.random() * 3,
+                life: 1.0,
+                len:  90 + Math.random() * 80,   // longer tail (was 55–120)
+                lw:   skyStyle >= 3 ? 4 : 3,
+                color: hue !== null
+                    ? `hsla(${hue},100%,${isDark ? 90 : 97}%,`
+                    : (isDark ? 'rgba(220,235,255,' : 'rgba(255,255,255,')
+            });
+        }
+
+        skyParticles = skyParticles.filter(p => p.life > 0);
+        skyParticles.forEach(p => {
+            ctx.save();
+            ctx.globalAlpha = p.life;
+            const tailLen = p.len * p.life;
+            const mag = Math.hypot(p.vx, p.vy);
+            // Bright core dot at head (no shadowBlur — use double circle fake glow)
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.lw * 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = p.color + '0.25)';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.lw * 1.2, 0, Math.PI * 2);
+            ctx.fillStyle = p.color + '1)';
+            ctx.fill();
+            // Fading tail
+            const grad = ctx.createLinearGradient(
+                p.x, p.y,
+                p.x - p.vx / mag * tailLen, p.y - p.vy / mag * tailLen
+            );
+            grad.addColorStop(0, p.color + '1)');
+            grad.addColorStop(1, p.color + '0)');
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = p.lw;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x - p.vx / mag * tailLen, p.y - p.vy / mag * tailLen);
+            ctx.stroke();
+            ctx.restore();
+            p.x += p.vx; p.y += p.vy;
+            p.life -= 0.016;
+        });
+    }
+
     ctx.strokeStyle = isDark ? '#334155' : '#ffffff'; ctx.lineWidth = 6;
     
     const pFarLeft = getScreenPos(-1.5, 0, canvasW), pFarRight = getScreenPos(1.5, 0, canvasW);
@@ -1688,7 +1969,7 @@ function drawBackground(canvasW) {
 
 function drawStaticBackground() {
     ctx.clearRect(0, 0, gameWidth, gameHeight);
-    drawBackground(gameWidth);
+    // bg-canvas provides the animated background during non-game states
 }
 
 // ---- ORB SPAWNING ----
@@ -1836,6 +2117,16 @@ function startGameplay() {
     
     gameState = 'playing'; score = 0; speed = 4; frameCount = 0; obstacles = []; orbs = [];
     levelUpTimer = 0; nextMilestone = 100; streakBonusGranted = false;
+    skyStyle = 0; skyParticles = [];
+    // Sky starts immediately with base style
+    skyEffectsEnabled = true;
+    skyStarBase = Array.from({ length: 28 }, () => ({
+        x: Math.random() * gameWidth,
+        y: Math.random() * horizonY * 0.88,
+        r: 0.7 + Math.random() * 2,
+        twinkle: Math.random() * Math.PI * 2,
+        hue: Math.floor(Math.random() * 360)
+    }));
     
     for (let i=0; i<numPlayers; i++) {
         players[i].lives = 3; players[i].lane = 0; players[i].stats = {squats: 0, jumps: 0}; players[i].score = 0;
@@ -1847,26 +2138,38 @@ function startGameplay() {
         players[i].renderAngle = 0; players[i].renderArmL = undefined; players[i].renderArmR = undefined;
     }
 
-    // --- 3-DAY STREAK BONUS: give 5 shield orbs at start (once per day) ---
+    // --- STREAK BONUS + SPECIAL USERS: give 5 shield orbs at start ---
     const streak = parseInt(localStorage.getItem('current_streak')) || 0;
     const todayStr = new Date().toISOString().split('T')[0];
     const claimedDate = localStorage.getItem('streak_bonus_claimed_date');
+    const specialUsers = ['bin', 'pavani', 'simin', 'moosa'];
+    const playerNames = [currentPlayerName, currentPlayer2Name];
+    const isSpecialUser = playerNames.slice(0, numPlayers).some(n => specialUsers.includes((n || '').toLowerCase()));
+
+    // Grant shields
     if (streak >= 3 && claimedDate !== todayStr) {
-        for (let i=0; i<numPlayers; i++) players[i].shieldOrbs = 5;
+        for (let i = 0; i < numPlayers; i++) players[i].shieldOrbs = 5;
         localStorage.setItem('streak_bonus_claimed_date', todayStr);
-        // Force CSS animation to replay by cloning the banner
-        const banner = document.getElementById('streak-bonus-banner');
-        banner.classList.remove('hidden');
-        // Reset animation
-        banner.style.animation = 'none';
-        banner.offsetHeight; // reflow
-        banner.style.animation = '';
-        setTimeout(() => banner.classList.add('hidden'), 4000);
         streakBonusGranted = true;
-        // Hide the dashboard notice since bonus is now claimed
         document.getElementById('streak-reward-notice').classList.add('hidden');
     }
-    
+    for (let i = 0; i < numPlayers; i++) {
+        if (specialUsers.includes((playerNames[i] || '').toLowerCase())) {
+            players[i].shieldOrbs = Math.max(players[i].shieldOrbs, 5);
+        }
+    }
+
+    // Show banner only for special users or users who genuinely just earned the streak bonus
+    if (isSpecialUser || streakBonusGranted) {
+        document.getElementById('streak-bonus-text').textContent = `🔥 ${streak}-Day Login Streak  🛡️ +5 Shields!`;
+        const banner = document.getElementById('streak-bonus-banner');
+        banner.classList.remove('hidden');
+        banner.style.animation = 'none';
+        banner.offsetHeight;
+        banner.style.animation = '';
+        setTimeout(() => banner.classList.add('hidden'), 4500);
+    }
+
     updateHUD();
     showCameraForMode();
     bgMusic.currentTime = 0; bgMusic.play().catch(e => console.log(e));
@@ -1885,6 +2188,7 @@ function gameOver() {
     document.getElementById('game-over-screen').classList.remove('hidden');
 
     if (numPlayers === 2) {
+        document.getElementById('game-over-screen').classList.add('mode-2p');
         // Hide score row — only show winner banner + stats
         document.getElementById('score-row').style.display = 'none';
         document.getElementById('final-p2-container').classList.remove('hidden');
@@ -1897,8 +2201,10 @@ function gameOver() {
         document.getElementById('final-p2-stats-name').innerText = currentPlayer2Name;
         document.getElementById('final-p1-squats').innerText = players[0].stats.squats;
         document.getElementById('final-p1-jumps').innerText = players[0].stats.jumps;
+        document.getElementById('final-p1-energy').textContent = ((score * 0.01) + (players[0].stats.squats * 0.5) + (players[0].stats.jumps * 0.8)).toFixed(1);
         document.getElementById('final-p2-squats').innerText = players[1].stats.squats;
         document.getElementById('final-p2-jumps').innerText = players[1].stats.jumps;
+        document.getElementById('final-p2-energy').textContent = ((score * 0.01) + (players[1].stats.squats * 0.5) + (players[1].stats.jumps * 0.8)).toFixed(1);
 
         // Winner = whoever still has lives (survivor wins)
         let winnerName, winnerScore;
@@ -1919,14 +2225,22 @@ function gameOver() {
         document.getElementById('winner-banner').classList.remove('hidden');
         document.getElementById('winner-name').innerText  = winnerName;
         document.getElementById('winner-score').innerText = winnerScore;
+
+        // Show winner stamp on the correct stats card
+        document.getElementById('winner-stamp-p1').classList.remove('show');
+        document.getElementById('winner-stamp-p2').classList.remove('show');
+        const stampId = (winnerName === currentPlayerName) ? 'winner-stamp-p1' : 'winner-stamp-p2';
+        setTimeout(() => document.getElementById(stampId).classList.add('show'), 400);
     } else {
         // Single player
+        document.getElementById('game-over-screen').classList.remove('mode-2p');
         document.getElementById('final-p1-name').innerText = currentPlayerName;
         document.getElementById('final-p1-stats-name').classList.add('hidden');
         document.getElementById('score-row').style.display = '';
         document.getElementById('final-score').innerText = Math.floor(score);
         document.getElementById('final-p1-squats').innerText = players[0].stats.squats;
         document.getElementById('final-p1-jumps').innerText = players[0].stats.jumps;
+        document.getElementById('final-p1-energy').textContent = ((score * 0.02) + (players[0].stats.squats * 0.5) + (players[0].stats.jumps * 0.8)).toFixed(1);
         document.getElementById('final-p2-container').classList.add('hidden');
         document.getElementById('winner-banner').classList.add('hidden');
     }
@@ -1967,7 +2281,7 @@ function drawShieldRing(p, subW) {
     const basePos  = getScreenPos(p.lane, 0.85, subW);
     const pulse    = 1 + Math.sin(frameCount * 0.15) * 0.08;
     const radius   = 80;
-    const progress = p.shieldTimer / 1800;   // countdown 1 → 0
+    const progress = p.shieldTimer / 300;   // countdown 1 → 0
     const secsLeft = Math.ceil(p.shieldTimer / 60);
 
     ctx.save();
@@ -2073,21 +2387,21 @@ function updateAndDrawPlayer(p, subW, playerIndex) {
     else if (p.isResting) color = '#a78bfa'; // Purple tint while resting
     if (p.invulnerableFrames > 0 && !p.shieldActive) color = '#ffffff';
 
-    const w = 50, h = 50;
+    const w = 70, h = 70;
 
     if (p.isJumping) {
         ctx.fillStyle = '#fb923c';
         ctx.beginPath();
         ctx.moveTo(-w/3, 0);
-        ctx.lineTo(0, 30 + Math.random() * 20);
+        ctx.lineTo(0, 42 + Math.random() * 28);
         ctx.lineTo(w/3, 0);
         ctx.fill();
     }
 
     ctx.fillStyle = color;
-    const armLength = 30;
-    const armThickness = 12;
-    const shoulderY = -h + 15;
+    const armLength = 42;
+    const armThickness = 17;
+    const shoulderY = -h + 21;
 
     ctx.save();
     ctx.translate(-w/2, shoulderY);
@@ -2122,7 +2436,7 @@ function updateAndDrawPlayer(p, subW, playerIndex) {
     
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 0;
     ctx.beginPath(); 
-    ctx.ellipse(p.renderX, basePos.y, 25 * p.renderScaleX, 8, 0, 0, Math.PI * 2); 
+    ctx.ellipse(p.renderX, basePos.y, 35 * p.renderScaleX, 11, 0, 0, Math.PI * 2);
     ctx.fill();
 }
 
@@ -2153,7 +2467,10 @@ function gameLoop() {
     if (levelUpTimer > 0) {
         levelUpTimer--;
         if (levelUpTimer === 0) document.getElementById('level-up-overlay').classList.add('hidden');
-    } else {
+    }
+
+    // Score and obstacle spawning always run (independent of levelUpTimer display)
+    {
         score += (speed / 100);
         // Track per-player score based on survival
         for (let i = 0; i < numPlayers; i++) {
@@ -2170,6 +2487,8 @@ function gameLoop() {
             else if (nextMilestone === 200) msg = "Duck under the door frames!";
             else if (nextMilestone === 300) msg = "You are a moving star!";
             else if (nextMilestone === 400) msg = "You are a legend!";
+            // Upgrade sky style every 100 pts (0→1→2→3→4)
+            skyStyle = Math.min(skyStyle + 1, 4);
             document.getElementById('level-prompt-text').innerText = msg;
             document.getElementById('level-up-overlay').classList.remove('hidden');
             playSynth('levelup');
@@ -2332,13 +2651,47 @@ function gameLoop() {
 /**
  * INITIALIZATION
  */
-const SPLASH_DURATION_MS = 2500;
+const WARNING_READ_PLAY_ICON = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>`;
+const WARNING_READ_STOP_ICON = `<line x1="1" y1="1" x2="23" y2="23"></line><polygon points="9 9 11 5 11 19 6 15 2 15 2 9 9 9"></polygon><path d="M15.54 8.46a5 5 0 0 1 1.46 3.54"></path>`;
 
-function dismissSplashScreen() {
-    const splash = document.getElementById('splash-screen');
-    if (!splash || splash.classList.contains('hidden')) return;
-    splash.classList.add('hidden');
-    splash.setAttribute('aria-busy', 'false');
+function resetWarningReadBtn() {
+    const btn = document.getElementById('warning-read-btn');
+    const icon = document.getElementById('warning-read-icon');
+    if (!btn || !icon) return;
+    icon.innerHTML = WARNING_READ_PLAY_ICON;
+    btn.classList.remove('bg-amber-300', 'dark:bg-amber-700');
+    btn.setAttribute('aria-pressed', 'false');
+}
+
+function stopWarningAudio() {
+    const audio = document.getElementById('warning-audio');
+    if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+    }
+    resetWarningReadBtn();
+}
+
+function toggleWarningRead() {
+    const btn = document.getElementById('warning-read-btn');
+    const icon = document.getElementById('warning-read-icon');
+    const audio = document.getElementById('warning-audio');
+    if (!btn || !icon || !audio) return;
+
+    if (!audio.paused) {
+        stopWarningAudio();
+        return;
+    }
+
+    audio.currentTime = 0;
+    audio.play().then(() => {
+        icon.innerHTML = WARNING_READ_STOP_ICON;
+        btn.classList.add('bg-amber-300', 'dark:bg-amber-700');
+        btn.setAttribute('aria-pressed', 'true');
+    }).catch(() => stopWarningAudio());
+
+    audio.onended = stopWarningAudio;
+    audio.onerror = stopWarningAudio;
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -2352,10 +2705,199 @@ window.addEventListener('DOMContentLoaded', () => {
     if (savedName) document.getElementById('player-name').value = savedName;
     updateLoginNameCheck();
     const savedName2 = localStorage.getItem('player2_name');
-    if (savedName2) { currentPlayer2Name = savedName2; document.getElementById('player2-name').value = savedName2; }
+    if (savedName2) { currentPlayer2Name = savedName2; }
     drawStaticBackground();
-    setTimeout(dismissSplashScreen, SPLASH_DURATION_MS);
+    setTimeout(() => {
+        const intro = document.getElementById('bg-intro');
+        if (intro) intro.classList.add('out');
+    }, 2000);
 });
+</script>
+
+<!-- Animated background canvas — matches login.html loading screen -->
+<script>
+(function() {
+    const bgCanvas = document.getElementById('bg-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    let W, H, lines, particles;
+
+    function resize() {
+        W = bgCanvas.width  = window.innerWidth;
+        H = bgCanvas.height = window.innerHeight;
+        init();
+    }
+
+    function init() {
+        lines = Array.from({ length: 18 }, (_, i) => ({
+            y:   (H / 18) * i + Math.random() * 30,
+            x:   Math.random() * W,
+            amp: 10 + Math.random() * 22,
+            freq:0.004 + Math.random() * 0.006,
+            spd: 0.18 + Math.random() * 0.3,
+            col: ['rgba(42,157,143,', 'rgba(192,57,43,', 'rgba(244,162,97,'][i % 3],
+            op:  0.04 + Math.random() * 0.06
+        }));
+        particles = Array.from({ length: 55 }, () => ({
+            x:  Math.random() * W,
+            y:  Math.random() * H,
+            r:  0.5 + Math.random() * 1.5,
+            vx: 0.3 + Math.random() * 0.8,
+            vy: -0.1 - Math.random() * 0.3,
+            op: 0.1 + Math.random() * 0.25,
+            col:['rgba(42,157,143,', 'rgba(212,168,67,', 'rgba(241,250,238,'][Math.floor(Math.random()*3)]
+        }));
+    }
+
+    let t = 0;
+    function drawBgKoru(cx, cy, scale, color) {
+        bgCtx.save();
+        bgCtx.translate(cx, cy);
+        bgCtx.rotate(t * 0.002);
+        bgCtx.beginPath();
+        for (let a = 0; a < Math.PI * 4; a += 0.05) {
+            const r = (a / (Math.PI * 4)) * scale;
+            const x = Math.cos(a) * r, y = Math.sin(a) * r;
+            a < 0.05 ? bgCtx.moveTo(x, y) : bgCtx.lineTo(x, y);
+        }
+        bgCtx.strokeStyle = color;
+        bgCtx.lineWidth = 3;
+        bgCtx.stroke();
+        bgCtx.restore();
+    }
+
+    function drawBg() {
+        bgCtx.clearRect(0, 0, W, H);
+
+        const isDark = document.documentElement.classList.contains('dark');
+
+        const grad = bgCtx.createRadialGradient(W*0.35, H*0.45, 0, W*0.5, H*0.5, W*0.85);
+        if (isDark) {
+            grad.addColorStop(0,   '#0d1f1a');
+            grad.addColorStop(0.4, '#0f1e2a');
+            grad.addColorStop(1,   '#0a1628');
+        } else {
+            grad.addColorStop(0,   '#e8f4ef');
+            grad.addColorStop(0.4, '#d4ede7');
+            grad.addColorStop(1,   '#c5e4dc');
+        }
+        bgCtx.fillStyle = grad;
+        bgCtx.fillRect(0, 0, W, H);
+
+        const lineOpMul = isDark ? 3.5 : 2.5;
+        lines.forEach(l => {
+            bgCtx.beginPath();
+            for (let x = 0; x <= W; x += 3) {
+                const y = l.y + Math.sin((x + l.x) * l.freq) * l.amp;
+                x === 0 ? bgCtx.moveTo(x, y) : bgCtx.lineTo(x, y);
+            }
+            bgCtx.strokeStyle = l.col + (l.op * lineOpMul) + ')';
+            bgCtx.lineWidth = 1.5;
+            bgCtx.stroke();
+            l.x += l.spd;
+            if (l.x > W) l.x = 0;
+        });
+
+        const partOpMul = isDark ? 3.5 : 2.5;
+        particles.forEach(p => {
+            bgCtx.beginPath();
+            bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            bgCtx.fillStyle = p.col + (p.op * partOpMul) + ')';
+            bgCtx.fill();
+            p.x += p.vx; p.y += p.vy;
+            if (p.x > W) p.x = 0;
+            if (p.y < 0)  p.y = H;
+        });
+
+        const koruOp = isDark ? 0.18 : 0.12;
+        drawBgKoru(W * 0.08, H * 0.18, 90,  `rgba(42,157,143,${koruOp})`);
+        drawBgKoru(W * 0.92, H * 0.75, 70,  `rgba(192,57,43,${isDark ? 0.15 : 0.1})`);
+        drawBgKoru(W * 0.5,  H * 0.88, 55,  `rgba(244,162,97,${isDark ? 0.15 : 0.1})`);
+
+        t++;
+        requestAnimationFrame(drawBg);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    drawBg();
+})();
+</script>
+
+<!-- ── FIREWORKS OVERLAY (streak screen celebration) ── -->
+<canvas id="fireworks-canvas" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:200;display:none;"></canvas>
+<script>
+(function () {
+    const fw = document.getElementById('fireworks-canvas');
+    const fctx = fw.getContext('2d');
+    let fwParticles = [], fwAnimId = null, fwActive = false;
+
+    function resize() { fw.width = window.innerWidth; fw.height = window.innerHeight; }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function burst(cx, cy) {
+        const palette = ['#f59e0b','#ef4444','#10b981','#3b82f6','#8b5cf6','#ec4899','#fbbf24','#34d399'];
+        for (let i = 0; i < 28; i++) {
+            const angle = (i / 28) * Math.PI * 2 + Math.random() * 0.3;
+            const spd   = 2.5 + Math.random() * 5;
+            fwParticles.push({
+                x: cx, y: cy,
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd - 1,
+                color: palette[Math.floor(Math.random() * palette.length)],
+                r: 3 + Math.random() * 3,
+                life: 1.0,
+                decay: 0.012 + Math.random() * 0.01
+            });
+        }
+    }
+
+    function scheduleBursts() {
+        // Fire exactly 3 bursts at staggered times
+        [0, 550, 1100].forEach(d => setTimeout(() => {
+            burst(fw.width * (0.2 + Math.random() * 0.6), fw.height * (0.1 + Math.random() * 0.5));
+        }, d));
+        // Stop the active flag after the last burst fires so particles fade on their own
+        setTimeout(() => { fwActive = false; }, 1150);
+    }
+
+    function drawFw() {
+        fctx.clearRect(0, 0, fw.width, fw.height);
+        fwParticles = fwParticles.filter(p => p.life > 0);
+        fwParticles.forEach(p => {
+            fctx.save();
+            fctx.globalAlpha = p.life;
+            fctx.beginPath();
+            fctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+            fctx.fillStyle = p.color;
+            fctx.shadowColor = p.color;
+            fctx.shadowBlur = 6;
+            fctx.fill();
+            fctx.restore();
+            p.x  += p.vx;
+            p.y  += p.vy;
+            p.vy += 0.09;   // gravity
+            p.vx *= 0.98;   // air drag
+            p.life -= p.decay;
+        });
+        if (fwActive || fwParticles.length > 0) fwAnimId = requestAnimationFrame(drawFw);
+        else { fctx.clearRect(0, 0, fw.width, fw.height); fw.style.display = 'none'; }
+    }
+
+    window.startFireworks = function () {
+        fwActive = true;
+        fwParticles = [];
+        fw.style.display = 'block';
+        cancelAnimationFrame(fwAnimId);
+        scheduleBursts();
+        drawFw();
+    };
+
+    window.stopFireworks = function () {
+        fwActive = false;
+        // particles fade out naturally; canvas hides itself when empty
+    };
+})();
 </script>
 
 </body>
