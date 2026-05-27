@@ -334,6 +334,7 @@
     <canvas id="game-canvas"></canvas>
 
     <audio id="bg-music" loop preload="auto"></audio>
+    <audio id="warning-audio" preload="none" src="safetywarning.mp3"></audio>
     <script>
     const musicPlaylist = [
       "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
@@ -578,7 +579,7 @@
                 <button id="btn-warning-back" class="w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-500 dark:hover:border-gray-300 hover:text-gray-800 dark:hover:text-gray-100 text-xl font-bold transition hover:scale-105 active:scale-95 mb-4">←</button>
                 <div class="flex items-center justify-between mb-6 border-b-2 border-amber-200 dark:border-amber-900 pb-2">
                     <h2 id="txt-warning-title" class="text-4xl md:text-5xl font-black text-amber-600 dark:text-amber-400">Safety Warning</h2>
-                    <button type="button" id="warning-read-btn" onclick="toggleWarningRead()" title="Read aloud"
+                    <button type="button" id="warning-read-btn" title="Play safety warning audio" aria-label="Play safety warning audio"
                         class="flex-shrink-0 w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/50 border-2 border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 flex items-center justify-center transition hover:bg-amber-200 dark:hover:bg-amber-800 hover:scale-105 active:scale-95">
                         <svg id="warning-read-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7">
                             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -1663,6 +1664,7 @@ document.getElementById('btn-dashboard-back').addEventListener('click', () => {
 });
 
 document.getElementById('btn-warning-back').addEventListener('click', () => {
+    stopWarningAudio();
     document.getElementById('warning-screen').classList.add('hidden');
     document.getElementById('dashboard-screen').classList.remove('hidden');
 });
@@ -1705,9 +1707,12 @@ document.getElementById('btn-play').addEventListener('click', () => {
 });
 
 document.getElementById('warning-continue-btn').addEventListener('click', () => {
+    stopWarningAudio();
     document.getElementById('warning-screen').classList.add('hidden');
     showInstructionsScreen();
 });
+
+document.getElementById('warning-read-btn').addEventListener('click', toggleWarningRead);
 
 document.getElementById('instruction-advance').addEventListener('click', advanceInstruction);
 document.getElementById('instruction-next').addEventListener('click', (e) => { e.stopPropagation(); advanceInstruction(); });
@@ -2649,40 +2654,47 @@ function gameLoop() {
 /**
  * INITIALIZATION
  */
+const WARNING_READ_PLAY_ICON = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>`;
+const WARNING_READ_STOP_ICON = `<line x1="1" y1="1" x2="23" y2="23"></line><polygon points="9 9 11 5 11 19 6 15 2 15 2 9 9 9"></polygon><path d="M15.54 8.46a5 5 0 0 1 1.46 3.54"></path>`;
+
+function resetWarningReadBtn() {
+    const btn = document.getElementById('warning-read-btn');
+    const icon = document.getElementById('warning-read-icon');
+    if (!btn || !icon) return;
+    icon.innerHTML = WARNING_READ_PLAY_ICON;
+    btn.classList.remove('bg-amber-300', 'dark:bg-amber-700');
+    btn.setAttribute('aria-pressed', 'false');
+}
+
+function stopWarningAudio() {
+    const audio = document.getElementById('warning-audio');
+    if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+    }
+    resetWarningReadBtn();
+}
+
 function toggleWarningRead() {
     const btn = document.getElementById('warning-read-btn');
     const icon = document.getElementById('warning-read-icon');
-    const synth = window.speechSynthesis;
+    const audio = document.getElementById('warning-audio');
+    if (!btn || !icon || !audio) return;
 
-    const stopIcon = `<line x1="1" y1="1" x2="23" y2="23"></line><polygon points="9 9 11 5 11 19 6 15 2 15 2 9 9 9"></polygon><path d="M15.54 8.46a5 5 0 0 1 1.46 3.54"></path>`;
-    const playIcon = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>`;
-
-    function resetBtn() {
-        icon.innerHTML = playIcon;
-        btn.classList.remove('bg-amber-300', 'dark:bg-amber-700');
-    }
-
-    if (synth.speaking) {
-        synth.cancel();
-        resetBtn();
+    if (!audio.paused) {
+        stopWarningAudio();
         return;
     }
 
-    const text = [
-        document.getElementById('txt-warning-1').textContent.trim(),
-        document.getElementById('txt-warning-2').textContent.trim(),
-        document.getElementById('txt-warning-3').textContent.trim()
-    ].join('. ');
+    audio.currentTime = 0;
+    audio.play().then(() => {
+        icon.innerHTML = WARNING_READ_STOP_ICON;
+        btn.classList.add('bg-amber-300', 'dark:bg-amber-700');
+        btn.setAttribute('aria-pressed', 'true');
+    }).catch(() => stopWarningAudio());
 
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.rate = 0.88;
-    utt.pitch = 1;
-    utt.onend = resetBtn;
-    utt.onerror = resetBtn;
-    synth.speak(utt);
-
-    icon.innerHTML = stopIcon;
-    btn.classList.add('bg-amber-300', 'dark:bg-amber-700');
+    audio.onended = stopWarningAudio;
+    audio.onerror = stopWarningAudio;
 }
 
 window.addEventListener('DOMContentLoaded', () => {
