@@ -1,0 +1,21 @@
+{
+  "background.png": "assets/images/background.png",
+  "duck.png": "assets/images/duck.png",
+  "fly.png": "assets/images/fly.png",
+  "powerup.png": "assets/images/powerup.png",
+  "powerup.jpg": "assets/images/powerup.jpg",
+  "duck.mp4": "assets/videos/duck.mp4",
+  "fly.mp4": "assets/videos/fly.mp4",
+  "left.mp4": "assets/videos/left.mp4",
+  "right.mp4": "assets/videos/right.mp4",
+  "safetywarning.mp3": "assets/audio/safetywarning.mp3",
+  "music/Dawn_Light_On_Stone.mp3": "assets/audio/music/Dawn_Light_On_Stone.mp3",
+  "music/Gravity_s_Edge.mp3": "assets/audio/music/Gravity_s_Edge.mp3",
+  "music/Plaza_Mornings.mp3": "assets/audio/music/Plaza_Mornings.mp3",
+  "music/The_Gravity_Cage.mp3": "assets/audio/music/The_Gravity_Cage.mp3",
+  "voice prompt/duck.mp3": "assets/audio/voice/duck.mp3",
+  "voice prompt/fly.mp3": "assets/audio/voice/fly.mp3",
+  "voice prompt/left.mp3": "assets/audio/voice/left.mp3",
+  "voice prompt/powerup.mp3": "assets/audio/voice/powerup.mp3",
+  "voice prompt/right.mp3": "assets/audio/voice/right.mp3"
+}
