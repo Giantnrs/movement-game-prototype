@@ -944,6 +944,55 @@ test('localized HUD tiles share height and fit desktop, portrait and landscape s
     }
 });
 
+test('live-ranking title stays at the top with one, two or three names in either language and theme',async()=>{
+    const {context,page,errors}=await prepare(false,{stored:{leaderboard_data_version:'1'}});
+    try {
+        await page.evaluate(()=>{
+            window.__flushTimers();
+            document.getElementById('login-screen-wrap').style.display='none';
+            document.getElementById('bg-intro').style.display='none';
+            document.querySelectorAll('#center-screens > div').forEach(el=>el.classList.add('hidden'));
+            window.__gameTest.patch({numPlayers:1,currentPlayerName:'Aroha'});
+            window.__gameTest.call('startGameplay');
+        });
+        for(const width of [1920,1280,844,390,320]) {
+            await page.setViewportSize({width,height:854});
+            await page.evaluate(()=>window.__settleResize());
+            for(const lang of ['en','mi']) for(const dark of [false,true]) {
+                const layouts=await page.evaluate(({lang,dark})=>{
+                    const api=window.__gameTest;
+                    api.call('setLoginLang',lang);
+                    document.documentElement.classList.toggle('dark',dark);
+                    const tile=document.getElementById('hud-ranking-1p');
+                    const title=tile.querySelector('.hud-label');
+                    const board=[{name:'Mere',score:200},{name:'Hemi',score:50}];
+                    return [0,1,2,0].flatMap(savedCount=>{
+                        localStorage.setItem('game_leaderboard_normal',JSON.stringify(board.slice(0,savedCount)));
+                        return [0,100,300].map(score=>{
+                            api.patch({score});api.call('updateHUD');
+                            const t=tile.getBoundingClientRect(),h=title.getBoundingClientRect();
+                            const style=getComputedStyle(tile);
+                            const rows=[...tile.querySelectorAll('[data-rank-row]')].filter(row=>!row.hidden);
+                            return {savedCount,rows:rows.length,height:t.height,title:title.textContent,
+                                offset:h.top-t.top,expected:parseFloat(style.borderTopWidth)+parseFloat(style.paddingTop),
+                                rowsBelowTitle:rows.every(row=>row.getBoundingClientRect().top>=h.bottom-0.1)};
+                        });
+                    });
+                },{lang,dark});
+                for(const layout of layouts) {
+                    assert.equal(layout.rows,layout.savedCount+1);
+                    assert.equal(layout.height,132);
+                    assert.ok(Math.abs(layout.offset-layout.expected)<0.1,
+                        `title stays at the tile's top padding: ${width}px ${lang}, ${layout.rows} row(s), ${dark?'dark':'light'}`);
+                    assert.ok(layout.rowsBelowTitle,'ranking rows follow the title');
+                    assert.ok(layout.title.includes(lang==='mi'?'Tūranga':'Live ranking'));
+                }
+            }
+        }
+        assert.deepEqual(errors,[]);
+    }finally{await context.close();}
+});
+
 test('two-player fourth tiles show each slot’s name safely across replay, localization and mode changes',async()=>{
     const {context,page,errors}=await prepare(false,{stored:{leaderboard_data_version:'1',
         game_leaderboard_normal:JSON.stringify([{name:'Saved player',score:100}])}});

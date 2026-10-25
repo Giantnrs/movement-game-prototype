@@ -458,6 +458,8 @@ results without blocking navigation.
 HUD score/lives/shields labels include decorative 🏆/❤️/🛡️ icons; translated text
 remains separate so language changes retain the icons. Small-screen labels stack
 the icon above the text instead of reducing the established readable font sizes.
+The ranking tile aligns its contents to the top, so its title stays at the same
+top padding whether one, two or three real entries are available.
 The 📊 live-ranking title uses the same `.hud-label` typography as the other
 titles, including their responsive size, line height, weight and capitalization.
 Both HUD modes localize score, lives and shields through `ui/localization.js`,

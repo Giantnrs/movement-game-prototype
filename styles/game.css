@@ -413,7 +413,7 @@
 .hud-value { max-width:100%; font-size:60px; line-height:72px; font-weight:900; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .hud-lives { border-color:#fb7185; background:#ffe4e6fa; color:#881337; }
 .hud-shields { border-color:#22d3ee; background:#cffafefa; color:#164e63; }
-.hud-ranking { border-color:#818cf8; background:#eef2fffa; color:#312e81; gap:0; align-items:stretch; padding:4px 10px; }
+.hud-ranking { border-color:#818cf8; background:#eef2fffa; color:#312e81; gap:0; justify-content:flex-start; align-items:stretch; padding:4px 10px; }
 .hud-rank-row { display:grid; grid-template-columns:3ch minmax(0,1fr) auto; align-items:center; column-gap:8px; min-height:26px; font-size:22px; line-height:28px; font-weight:600; text-align:left; font-variant-numeric:tabular-nums; }
 .hud-rank-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .hud-rank-number, .hud-rank-score { white-space:nowrap; }
