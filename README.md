@@ -118,6 +118,8 @@ npm run build:pages
 
 This creates ignored `_site/` containing only `index.html`, runtime code,
 styles and media. Development files, debug logs and `local-archive/` are excluded.
+The build updates the stylesheet URL with a content hash so browsers fetch new
+CSS after deployment instead of keeping an older cached layout.
 All asset URLs are relative, so the game supports a repository Pages subpath.
 The HTTPS site can request camera access; CDN dependencies still need internet.
 

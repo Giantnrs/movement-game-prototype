@@ -26,7 +26,7 @@ function checkAssets() {
             if (/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(reference)) continue;
             // CSS URLs resolve from the stylesheet; script-set URLs resolve from the page.
             const base = file.endsWith('.css') ? path.dirname(file) : root;
-            const target = path.resolve(base, reference);
+            const target = path.resolve(base, reference.split(/[?#]/, 1)[0]);
             assert(target.startsWith(root + path.sep), `Asset escapes project: ${reference}`);
             assert(fs.existsSync(target) && fs.statSync(target).isFile(),
                 `Missing reference in ${path.relative(root, file)}: ${reference}`);

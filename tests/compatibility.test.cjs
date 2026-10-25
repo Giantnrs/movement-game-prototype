@@ -317,7 +317,7 @@ async function compareScenario(run, options) {
 }
 
 test('existing page markup, utility classes, and CSS are preserved around relocated assets and the tracking overlay', () => {
-    const normalize = html => canonicalizeMedia(html).replace(/<style>[\s\S]*?<\/style>|<link rel="stylesheet" href="styles\/game.css">/g, '<!-- styles -->')
+    const normalize = html => canonicalizeMedia(html).replace(/<style>[\s\S]*?<\/style>|<link rel="stylesheet" href="styles\/game\.css(?:\?v=[a-f\d]{12})?">/g, '<!-- styles -->')
         .replace(/        <!-- 1 PLAYER HUD -->[\s\S]*?(?=        <!-- Login \()/g, '')
         .replaceAll(' data-energy-estimate', '')
         .replaceAll('>EST. ENERGY<', '>ENERGY<')
@@ -941,6 +941,61 @@ test('localized HUD tiles share height and fit desktop, portrait and landscape s
             }
             assert.deepEqual(errors,[]);
         } finally {await context.close();}
+    }
+});
+
+test('a versioned stylesheet replaces a cached centered ranking layout after deployment',async()=>{
+    const css=fs.readFileSync(path.join(root,'styles/game.css'),'utf8');
+    let servedCss=css.replace(/(\.hud-ranking \{[^}]*)justify-content:flex-start;/,'$1');
+    const versionedHref=currentHtml.match(/href="(styles\/game\.css\?v=[a-f\d]{12})"/)[1];
+    const requests=[];
+    const cacheServer=createServer((req,res)=>{
+        const url=new URL(req.url,'http://localhost');
+        if(url.pathname==='/styles/game.css') {
+            requests.push(url.pathname+url.search);
+            res.writeHead(200,{'Content-Type':'text/css','Cache-Control':'public, max-age=3600'});
+            res.end(servedCss);return true;
+        }
+        if(url.pathname.endsWith('.html')) {
+            const href=url.pathname==='/updated.html'?versionedHref:'styles/game.css';
+            res.writeHead(200,{'Content-Type':'text/html','Cache-Control':'no-store'});
+            res.end(`<!doctype html><html><head><link rel="stylesheet" href="${href}"></head><body>${hudSection(currentHtml).replace('gameplay-hud hidden','gameplay-hud')}</body></html>`);
+            return true;
+        }
+        return false;
+    });
+    await new Promise(resolve=>cacheServer.listen(0,'127.0.0.1',resolve));
+    const url=`http://127.0.0.1:${cacheServer.address().port}`;
+    // Network interception disables Chromium's HTTP cache; use a separate context.
+    const context=await browser.newContext({viewport:{width:1280,height:800}});
+    try {
+        const page=await context.newPage();
+        const alignment=()=>page.locator('#hud-ranking-1p').evaluate(tile=>getComputedStyle(tile).justifyContent);
+        await page.goto(`${url}/before.html`);
+        assert.equal(await alignment(),'center');
+        servedCss=css;
+        await page.goto(`${url}/unversioned.html`);
+        assert.equal(await alignment(),'center','the previously loaded CSS remains cached');
+        assert.equal(requests.length,1,'browser reused its cached stylesheet');
+        await page.goto(`${url}/updated.html`);
+        assert.equal(await alignment(),'flex-start');
+        assert.deepEqual(requests,['/styles/game.css','/'+versionedHref]);
+        for(const count of [1,2]) {
+            const layout=await page.evaluate(count=>{
+                const tile=document.getElementById('hud-ranking-1p');
+                tile.querySelectorAll('[data-rank-row]').forEach((row,index)=>{
+                    row.hidden=index>=count;
+                    row.querySelector('.hud-rank-name').textContent=['Aroha','Mere'][index]||'';
+                });
+                const style=getComputedStyle(tile);
+                return {offset:tile.querySelector('.hud-label').getBoundingClientRect().top-tile.getBoundingClientRect().top,
+                    expected:parseFloat(style.borderTopWidth)+parseFloat(style.paddingTop)};
+            },count);
+            assert.ok(Math.abs(layout.offset-layout.expected)<0.1,`${count} names keep the title at the top after a cached-page upgrade`);
+        }
+    }finally{
+        await context.close();
+        await new Promise(resolve=>cacheServer.close(resolve));
     }
 });
 

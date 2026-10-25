@@ -19,10 +19,20 @@ function build() {
     return bundle;
 }
 
+function versionStylesheet(html, css) {
+    const version = createHash('sha256').update(css).digest('hex').slice(0, 12);
+    return html.replace(/href="styles\/game\.css(?:\?v=[a-f\d]+)?"/,
+        `href="styles/game.css?v=${version}"`);
+}
+
 if (require.main === module) {
     fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
     fs.writeFileSync(path.join(root, 'dist/game.js'), build());
+    const htmlPath = path.join(root, 'index.html');
+    const html = fs.readFileSync(htmlPath, 'utf8');
+    const versioned = versionStylesheet(html, fs.readFileSync(path.join(root, 'styles/game.css')));
+    if (versioned !== html) fs.writeFileSync(htmlPath, versioned);
     console.log(`Built dist/game.js from ${sources.length} source files.`);
 }
 
-module.exports = { build, root, sources };
+module.exports = { build, root, sources, versionStylesheet };

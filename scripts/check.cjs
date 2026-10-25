@@ -2,13 +2,15 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { Script } = require('node:vm');
-const { build, root } = require('./build.cjs');
+const { build, root, versionStylesheet } = require('./build.cjs');
 const { checkAssets } = require('./assets.cjs');
 
 assert.equal(fs.readFileSync(path.join(root, 'dist/game.js'), 'utf8'), build(),
     'dist/game.js is stale. Run npm run build.');
 
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+assert.equal(html, versionStylesheet(html, fs.readFileSync(path.join(root, 'styles/game.css'))),
+    'Stylesheet cache version is stale. Run npm run build.');
 for (const [, src] of html.matchAll(/<script src="([^"]+)"/g)) {
     if (src.startsWith('https://')) continue;
     new Script(fs.readFileSync(path.join(root, src), 'utf8'), { filename: src });

@@ -3,9 +3,18 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { test } = require('node:test');
-const { root } = require('../scripts/build.cjs');
+const { root, versionStylesheet } = require('../scripts/build.cjs');
 const { assetPaths, checkAssets } = require('../scripts/assets.cjs');
 const { createServer } = require('../scripts/serve.cjs');
+
+test('stylesheet cache version changes with CSS and remains stable for unchanged builds', () => {
+    const html = '<link rel="stylesheet" href="styles/game.css">';
+    const first = versionStylesheet(html, '.hud-ranking { justify-content:center; }');
+    const next = versionStylesheet(first, '.hud-ranking { justify-content:flex-start; }');
+    assert.notEqual(first, next);
+    assert.match(next, /href="styles\/game\.css\?v=[a-f\d]{12}"/);
+    assert.equal(versionStylesheet(next, '.hud-ranking { justify-content:flex-start; }'), next);
+});
 
 test('relocated media is byte-for-byte identical to the original assets', () => {
     for (const [old, current] of Object.entries(assetPaths)) {

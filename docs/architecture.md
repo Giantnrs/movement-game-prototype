@@ -460,6 +460,12 @@ remains separate so language changes retain the icons. Small-screen labels stack
 the icon above the text instead of reducing the established readable font sizes.
 The ranking tile aligns its contents to the top, so its title stays at the same
 top padding whether one, two or three real entries are available.
+The build adds a CSS-content hash to the stylesheet URL in `index.html`, and
+`npm run check` rejects an outdated hash. This changes the browser cache key
+when styles change, including on GitHub Pages. The compatibility baseline
+excludes only this stylesheet query string. A real HTTP-cache browser test
+retains the old centered CSS at its unversioned URL, then verifies that the
+versioned URL loads the fix and keeps one/two-name titles at the top.
 The 📊 live-ranking title uses the same `.hud-label` typography as the other
 titles, including their responsive size, line height, weight and capitalization.
 Both HUD modes localize score, lives and shields through `ui/localization.js`,
