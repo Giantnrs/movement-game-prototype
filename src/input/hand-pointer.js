@@ -2,7 +2,7 @@
 function createHandPointer({ state, app }) {
     const MAX_GAP_MS = 250;
     let activeHand = null, lastAt, position = null, reference = null;
-    let samples = [];
+    let samples = [], steadyWrist = null;
 
     function valid(point) {
         return point && Number.isFinite(point.x) && Number.isFinite(point.y) &&
@@ -16,6 +16,7 @@ function createHandPointer({ state, app }) {
         lastAt = undefined;
         reference = null;
         samples = [];
+        steadyWrist = null;
         app.handCursor.clearHandCursor();
     }
 
@@ -41,6 +42,7 @@ function createHandPointer({ state, app }) {
         if (activeHand !== null && !valid(pose[activeHand])) {
             reference = null;
             samples = [];
+            steadyWrist = null;
             app.handCursor.clearHandCursor(); return;
         }
         const raised = (index, allowance = 0.2) => valid(pose[index]) &&
@@ -53,6 +55,7 @@ function createHandPointer({ state, app }) {
             app.handCursor.clearHandCursor();
             position ??= { x: window.innerWidth / 2, y: window.innerHeight / 2 };
             samples = [];
+            steadyWrist = null;
             activeHand = hand;
             // Capture a compact touchpad around the raised wrist. A full-screen
             // swipe needs only 0.8 shoulder widths / 0.45 torso heights; body
@@ -65,9 +68,21 @@ function createHandPointer({ state, app }) {
         samples.push({ x: pose[hand].x, y: pose[hand].y });
         if (samples.length > 3) samples.shift();
         const median = axis => [...samples].map(point => point[axis]).sort((a, b) => a - b)[Math.floor((samples.length - 1) / 2)];
+        const wrist = { x: median('x'), y: median('y') };
+        steadyWrist ??= { ...wrist };
+        // Camera-space jitter is magnified by the compact touchpad. Stabilize
+        // it before applying screen gain, while allowing slow deliberate motion
+        // to accumulate beyond this small, body-scaled noise radius.
+        const noiseRadius = reference.width / 16;
+        const wristDistance = Math.hypot(wrist.x - steadyWrist.x, wrist.y - steadyWrist.y);
+        if (wristDistance > noiseRadius) {
+            const amount = 1 - noiseRadius / wristDistance;
+            steadyWrist.x += (wrist.x - steadyWrist.x) * amount;
+            steadyWrist.y += (wrist.y - steadyWrist.y) * amount;
+        }
         const intent = {
-            x: reference.cursor.x - (median('x') - reference.x) / reference.width * Math.max(0, window.innerWidth - marginX * 2),
-            y: reference.cursor.y + (median('y') - reference.y) / reference.height * Math.max(0, window.innerHeight - marginY * 2)
+            x: reference.cursor.x - (steadyWrist.x - reference.x) / reference.width * Math.max(0, window.innerWidth - marginX * 2),
+            y: reference.cursor.y + (steadyWrist.y - reference.y) / reference.height * Math.max(0, window.innerHeight - marginY * 2)
         };
         // Rebase confirmed edge overshoot, so reversing a swipe immediately
         // comes back onscreen. Filter before rebasing: a lone spike cannot drag
@@ -80,7 +95,7 @@ function createHandPointer({ state, app }) {
         if (lastAt !== undefined) {
             const dx = intent.x - position.x, dy = intent.y - position.y;
             const distance = Math.hypot(dx, dy);
-            const deadzone = Math.max(10, Math.min(32, Math.max(window.innerWidth, window.innerHeight) / 45));
+            const deadzone = Math.max(3, Math.min(7, Math.max(window.innerWidth, window.innerHeight) / 220));
             // Strong filtering near rest, quicker response for intentional moves.
             const tau = 180 - 125 * Math.min(1, Math.max(0, distance - 20) / 120);
             const alpha = (1 - Math.exp(-(now - lastAt) / tau)) * Math.max(0, distance - deadzone) / (distance || 1);

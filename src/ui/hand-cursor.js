@@ -116,6 +116,10 @@ function createHandCursor({ state, app }) {
         }
         if (target && inside && confirmed && !fired) elapsed += dt;
         confirmed = inside;
+        // Fractional camera timestamps can sum to just below exactly two
+        // seconds. Normalize floating-point roundoff without counting a missing
+        // observation or an unconfirmed interval as dwell.
+        if (Math.abs(elapsed - 2000) < 1e-7) elapsed = 2000;
         const progress = !target || fired ? 0 : Math.min(1, elapsed / 2000);
         cursor.dataset.progress = String(progress);
         cursor.dataset.paused = String(!!target && !inside);

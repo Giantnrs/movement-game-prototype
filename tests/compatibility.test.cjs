@@ -980,13 +980,26 @@ async function prepareHandPointer(count=1) {
         window.__handPoseAt=(x,y,center=0.5,hand=16)=>{
             const pose=Array.from({length:33},()=>({x:center,y:0.8,visibility:1,presence:1}));
             for(const [id,px,py] of [[11,center+0.1,0.4],[12,center-0.1,0.4],[23,center+0.07,0.7],[24,center-0.07,0.7]]) pose[id]={x:px,y:py,visibility:1,presence:1};
-            const left=Math.max(0.02,center-0.24),right=Math.min(0.98,center+0.24);
-            pose[hand]={x:right-(x-26)/(innerWidth-52)*(right-left),y:0.13+(y-26)/(innerHeight-52)*0.33,visibility:1,presence:1};
+            // Relative touchpad fixture: raise at the center, then swipe. Include
+            // the wrist noise band in the inverse mapping so desired positions
+            // describe the stabilized intent, not the old absolute camera range.
+            const dx=-(x-innerWidth/2)/(innerWidth-52)*0.16;
+            const dy=(y-innerHeight/2)/(innerHeight-52)*0.135;
+            const distance=Math.hypot(dx,dy),gain=distance ? 1+0.01/distance : 1;
+            pose[hand]={x:center+dx*gain,y:0.3+dy*gain,visibility:1,presence:1};
             return pose;
         };
         window.__handButtonPoint=id=>{const r=document.getElementById(id).getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};};
         window.__feedHand=(point,frames=1,ms=100)=>{
             for(let i=0;i<frames;i++) {window.__advancePoseTime(ms);api.call('observeHandPointer',window.__handPoseAt(point.x,point.y));}
+        };
+        window.__aimHand=point=>{
+            api.call('resetHandPointer');
+            window.__feedHand({x:innerWidth/2,y:innerHeight/2},1,1000/60);
+            window.__feedHand(point,60,1000/60);
+            // Aiming is separate from holding; these observations cannot satisfy
+            // the two-second dwell. Begin each timed assertion with a fresh ring.
+            api.call('clearHandCursor');
         };
     },count);
     return fixture;
@@ -998,13 +1011,13 @@ test('hand cursor shows a progress ring, activates a button only after two secon
         const result=await page.evaluate(()=>{
             const point=window.__handButtonPoint('hand-test-a');
             const progress=()=>Number(document.getElementById('hand-cursor').dataset.progress);
-            window.__feedHand(point);window.__feedHand(point,10);
+            window.__aimHand(point);window.__feedHand(point);window.__feedHand(point,10);
             const half={progress:progress(),offset:document.getElementById('hand-cursor-progress').style.strokeDashoffset,clicks:window.__handClicks.length};
             window.__feedHand(point,9);const before=window.__handClicks.length;
             window.__feedHand(point);const clicked=window.__handClicks.slice();
             window.__feedHand(point,30);const held=window.__handClicks.slice();
             window.__feedHand({x:innerWidth/2,y:innerHeight-40},5);
-            window.__gameTest.call('resetHandPointer');window.__feedHand(point,21);
+            window.__aimHand(point);window.__feedHand(point,21);
             return {half,before,clicked,held,again:window.__handClicks.slice(),hidden:document.getElementById('hand-cursor').hidden};
         });
         assert.ok(Math.abs(result.half.progress-0.5)<1e-9);assert.equal(result.half.offset,'50');assert.equal(result.half.clicks,0);
@@ -1025,7 +1038,7 @@ test('small hand tremor near a button edge completes dwell without restarting or
             return [15,30,60].map(fps=>{
                 api.call('resetHandPointer');window.__handClicks=[];
                 const base={x:rect.right-3,y:rect.top+rect.height/2};
-                window.__feedHand(base,1,1000/fps);
+                window.__aimHand(base);window.__feedHand(base,1,1000/fps);
                 const feed=n=>{for(let i=0;i<n;i++) window.__feedHand({x:base.x+(i%2?18:-18),y:base.y+Math.sin(i*1.7)*7},1,1000/fps);};
                 feed(Math.floor(fps*1.8));const early=window.__handClicks.length;
                 feed(fps);const clicks=window.__handClicks.slice();
@@ -1072,19 +1085,19 @@ test('hand dwell cancels on leaving, changing buttons, loss, stale or repeated c
         const result=await page.evaluate(()=>{
             const api=window.__gameTest,a=window.__handButtonPoint('hand-test-a'),b=window.__handButtonPoint('hand-test-b');
             const progress=()=>Number(document.getElementById('hand-cursor').dataset.progress);
-            window.__feedHand(a,16);window.__feedHand(b);const changed=progress();window.__feedHand(b,10);
+            window.__aimHand(a);window.__feedHand(a,16);const previous=progress();window.__feedHand(b,3);const changed=progress();window.__feedHand(b,10);
             const early=window.__handClicks.length;
-            api.call('resetHandPointer');window.__feedHand(a,16);window.__advancePoseTime(251);api.call('checkHandPointer');
+            window.__aimHand(a);window.__feedHand(a,16);window.__advancePoseTime(251);api.call('checkHandPointer');
             const stale=document.getElementById('hand-cursor').hidden;
-            window.__feedHand(a);const resumed=progress();window.__feedHand(a,10);
+            window.__aimHand(a);window.__feedHand(a);const resumed=progress();window.__feedHand(a,10);
             api.call('observeHandPointer',window.__handPoseAt(a.x,a.y));const repeated=progress();
             window.__feedHand(a,10);api.call('observeHandPointer',null);const missing=document.getElementById('hand-cursor').hidden;
             window.__feedHand(a,10);document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));const keyboard=progress();
             window.__feedHand(a,10);document.dispatchEvent(new PointerEvent('pointerdown'));const pointer=progress();
             window.__feedHand(a,10);document.dispatchEvent(new Event('scroll'));const scroll=progress();
-            return {changed,early,stale,resumed,repeated,missing,keyboard,pointer,scroll,clicks:window.__handClicks};
+            return {previous,changed,early,stale,resumed,repeated,missing,keyboard,pointer,scroll,clicks:window.__handClicks};
         });
-        assert.equal(result.changed,0);assert.equal(result.early,0);assert.equal(result.stale,true);assert.equal(result.resumed,0);
+        assert.ok(result.previous>0.5);assert.ok(result.changed<=0.1,'changing target cancels the old dwell before new observations count');assert.equal(result.early,0);assert.equal(result.stale,true);assert.equal(result.resumed,0);
         assert.equal(result.repeated,0);assert.equal(result.missing,true);assert.equal(result.keyboard,0);assert.equal(result.pointer,0);assert.equal(result.scroll,0);
         assert.deepEqual(result.clicks,[]);assert.deepEqual(errors,[]);
     }finally{await context.close();}
@@ -1096,6 +1109,7 @@ test('hand cursor cannot click disabled, hidden, covered or inert buttons and fo
         const result=await page.evaluate(()=>{
             const api=window.__gameTest,button=document.getElementById('hand-test-a'),point=window.__handButtonPoint('hand-test-a');
             const progress=()=>Number(document.getElementById('hand-cursor').dataset.progress);
+            window.__aimHand(point);
             const blocked=[];
             button.disabled=true;window.__feedHand(point,25);blocked.push(progress());button.disabled=false;
             button.setAttribute('aria-disabled','true');window.__feedHand(point,25);blocked.push(progress());button.removeAttribute('aria-disabled');
@@ -1107,7 +1121,7 @@ test('hand cursor cannot click disabled, hidden, covered or inert buttons and fo
             const close=document.createElement('button');close.textContent='Close';close.style.cssText='position:fixed;left:35%;top:35%;width:25%;height:80px';
             close.addEventListener('click',()=>dialog.close());dialog.appendChild(close);document.body.appendChild(dialog);dialog.showModal();
             api.call('resetHandPointer');const rect=close.getBoundingClientRect(),modalPoint={x:rect.x+rect.width/2,y:rect.y+rect.height/2};
-            window.__feedHand(modalPoint);const inside=document.getElementById('hand-cursor').parentNode===dialog;
+            window.__aimHand(modalPoint);window.__feedHand(modalPoint);const inside=document.getElementById('hand-cursor').parentNode===dialog;
             window.__feedHand(modalPoint,20);const closed=!dialog.open;
             window.__feedHand({x:innerWidth/2,y:innerHeight-40});const restored=document.getElementById('hand-cursor').parentNode===document.body;
             return {blocked,inside,closed,restored,clicks:window.__handClicks};
@@ -1135,9 +1149,16 @@ test('the running camera routes menu hand input in both modes, ignores Player 2,
                 const feed=async(poses,n)=>{for(let i=0;i<n;i++){window.__advancePoseTime(100);cameraTime+=0.1;window.__handPointerTestPoses=poses;await api.call('predictWebcam');}};
                 if(count===2) await feed([second],25);
                 const other=window.__handClicks.length;
-                await feed(count===1?[first]:[second,first],11);const half=Number(document.getElementById('hand-cursor').dataset.progress);
+                const neutral=window.__handPoseAt(innerWidth/2,innerHeight/2,count===1?0.5:0.75);
+                const target=count===1?[first]:[second,first];
+                await feed(count===1?[neutral]:[second,neutral],1);
+                await feed(target,8);api.call('clearHandCursor');
+                await feed(target,11);const half=Number(document.getElementById('hand-cursor').dataset.progress);
                 window.__visionDetectFailure=true;await feed([],1);const failed=document.getElementById('hand-cursor').hidden;
-                window.__visionDetectFailure=false;await feed(count===1?[first]:[first,second],21);
+                window.__visionDetectFailure=false;
+                await feed(count===1?[neutral]:[neutral,second],1);
+                await feed(count===1?[first]:[first,second],8);api.call('clearHandCursor');
+                await feed(count===1?[first]:[first,second],21);
                 return {other,half,failed,clicks:window.__handClicks,gameState:api.read().game.gameState,tracks:api.call('trackingReport').tracks.length};
             },count);
             assert.equal(result.other,0);assert.ok(Math.abs(result.half-0.5)<1e-9);assert.equal(result.failed,true);
@@ -1164,7 +1185,7 @@ test('gameplay hides and disables hand clicks in both modes, including tracking 
                 const second=window.__handPoseAt(point.x,point.y,0.25);
                 const lower=pose=>{const copy=structuredClone(pose);copy[16].y=0.8;return copy;};
                 const poses=count===1?[first]:[first,lower(second)];
-                window.__feedHand(point,16);
+                window.__aimHand(point);window.__feedHand(point,16);
                 const partial=Number(document.getElementById('hand-cursor').dataset.progress);
                 const players=api.read().game.players;players.forEach(player=>{player.baseline=0.4;});api.patch({players});
                 api.call('lockPlayers',poses.map(lower));api.call('startGameplay');
@@ -1176,7 +1197,9 @@ test('gameplay hides and disables hand clicks in both modes, including tracking 
                 await feed(count===1?[]:[first],25);
                 api.call('observeHandPointer',first);
                 const paused={off:cursorOff(),clicks:window.__handClicks.length,paused:api.call('isGameplayPaused')};
-                api.patch({gameState:'gameover'});await feed(poses,10);const early=window.__handClicks.length;
+                api.patch({gameState:'gameover'});
+                const neutral=window.__handPoseAt(innerWidth/2,innerHeight/2,count===1?0.5:0.75);
+                await feed(count===1?[neutral]:[neutral,lower(second)],20);await feed(poses,10);const early=window.__handClicks.length;
                 await feed(poses,40);
                 return {partial,immediate,playing,paused,early,clicks:window.__handClicks,phase:api.read().game.gameState};
             },count);

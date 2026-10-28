@@ -505,12 +505,22 @@ frame-to-frame shoulder/hip noise from rescaling a stationary wrist. Lowering
 and raising the hand recenters the area. A near-shoulder activation/release band
 (0.2/0.4 torso heights) prevents flickering. A brief uncertain selected wrist
 suspends clicking without switching to the other hand. Switching hands clears
-dwell. Wrist x is mirrored across the captured range bounded by the camera
-frame; wrist y maps from above the shoulders to just below shoulder height.
-Player 1 can reach the full viewport from their half. Coordinates stay 26 px
-inside the screen. A three-observation median rejects isolated spikes, followed
-by a 3–7 px deadzone and time-based smoothing: 180 ms near rest, decreasing to
-55 ms for large deliberate moves. No game-tracking geometry is changed.
+dwell. The cursor acts as a relative touchpad: the first raised wrist anchors
+at the current cursor (initially the viewport center), then subsequent wrist
+motion moves it. Horizontal movement is mirrored; vertical movement follows
+the wrist. The fixed control gain spans 0.8 shoulder widths and 0.45 torso
+heights per viewport. Lowering/re-raising or switching hands rebases the wrist
+while retaining the current cursor. Player 1 can reach the full viewport from
+their half. Coordinates stay 26 px inside the screen, with confirmed edge
+overshoot rebased so a reverse swipe immediately returns onscreen.
+
+A three-observation median rejects isolated spikes. A camera-space noise band
+of 5% of the captured shoulder width then stabilizes the median wrist before
+screen gain amplifies it; slow deliberate movement still accumulates beyond the
+band. Visual smoothing uses a 3–7 px stopping deadzone and a time constant of
+180 ms near rest, decreasing to 55 ms for large deliberate moves. Releasing or
+losing the wrist clears this filter with the touchpad reference. No game-tracking
+geometry is changed.
 
 `hand-cursor.js` uses actual topmost DOM hit testing for visible, enabled buttons
 and button roles. It highlights the target and fills an SVG ring for 2000 ms of
@@ -523,6 +533,9 @@ an amber ring. These unconfirmed intervals never count toward dwell, and no
 click can complete on one. Clear visible departures, sustained raw departures,
 occlusion and disabled targets cancel the selection. Target acquisition still
 requires the displayed pointer to hit an actual visible button.
+Fractional camera timestamps may accumulate sub-nanosecond roundoff. Dwell sums
+within `1e-7` ms of 2000 ms normalize to the two-second boundary; missing or
+unconfirmed observations still cannot complete a click.
 Holding does not repeat; leaving or lowering the hand rearms it. Different targets,
 game phase/mode/modal changes, missing/uncertain hands, camera gaps over 250 ms,
 time reversal/repetition, manual input, scrolling, resize, hidden pages and focus
@@ -535,6 +548,13 @@ Baseline exclusions cover only the added cursor markup and its CSS block. Tests
 cover timing, the progress ring, no held repeats, cancellation, disabled/covered/
 inert buttons, native dialogs, mirrored mapping/range, confidence, Player 1
 selection without enrollment, camera errors and inference on menu screens.
+Pointer fixtures explicitly raise a neutral wrist, swipe to a target and separate
+aiming from timed dwell. They verify relative anchoring, retained cursor position
+on a fresh raise, slow deliberate movement through the noise band, reverse edge
+swipes and settling distance. Camera integration waits for the original player's
+stable recovery before restoring menu pointing; it does not bypass enrollment
+or matching. Fractional timestamp tests cover both the exact dwell boundary and
+no early click.
 Noise tests at 15/30/60 camera observations per second cover torso jitter, wrist
 noise/spikes, near-edge tremor beside a neighboring button, intentional movement,
 height hysteresis, brief wrist uncertainty and paused-versus-canceled dwell. Existing

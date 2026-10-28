@@ -52,24 +52,32 @@ test('gameplay disables hand input and clears progress until the interface retur
     f.state.game.gameState='gameover';assert.ok(f.step(body),'results accept a fresh hand observation');
 });
 
-test('either raised hand moves a mirrored cursor and preserves the selected hand until lowered',()=>{
-    const f=fixture(),body=pose();
-    body[16]={x:0.3,y:0.3};
-    assert.ok(f.step(body).raw.x>640,'raw left moves toward the displayed right');
+test('either hand moves relative to its raise position, mirrors horizontal motion and clears dwell on switching',()=>{
+    const f=fixture(),body=pose();body[16]={x:0.5,y:0.3};
+    assert.equal(f.step(body).raw.x,640,'raising a hand starts at the current cursor');
+    body[16].x=0.46;
+    for(let i=0;i<3;i++) f.step(body);
+    const right=f.calls.at(-1);assert.ok(right.raw.x>640,'moving the active wrist left moves the cursor right');
     body[15]={x:0.7,y:0.3};
-    assert.ok(f.step(body).raw.x>640,'raising the second hand does not steal control');
+    assert.ok(f.step(body).raw.x>640,'raising another hand does not steal control');
     body[16].y=0.8;
-    assert.ok(f.step(body).raw.x<640,'the other hand takes over after lowering the active one');
-    assert.equal(f.calls.at(-2),null,'switching hands cancels any previous dwell');
+    const switched=f.step(body);
+    assert.equal(f.calls.at(-2),null,'switching hands cancels previous dwell');
+    body[15].x=0.74;
+    for(let i=0;i<3;i++) f.step(body);
+    assert.ok(f.calls.at(-1).raw.x<switched.raw.x,'the newly selected wrist controls relative movement');
 });
 
-test('Player 1 can reach all viewport edges from their side, in portrait and landscape',()=>{
+test('Player 1 can swipe to every viewport edge from their side, in portrait and landscape',()=>{
     for(const [width,height] of [[1280,800],[390,844]]) for(const x of [0.5,0.75,0.85]) {
         const f=fixture(),body=pose(x);f.window.innerWidth=width;f.window.innerHeight=height;
-        body[16]={x:Math.min(0.98,x+0.24),y:0.13};
-        let value=f.step(body);assert.ok(Math.abs(value.raw.x-26)<1e-6);assert.ok(Math.abs(value.raw.y-26)<1e-6);
-        body[16]={x:Math.max(0.02,x-0.24),y:0.46};
-        value=f.step(body);assert.ok(Math.abs(value.raw.x-(width-26))<1e-6);assert.ok(Math.abs(value.raw.y-(height-26))<1e-6);
+        body[16]={x,y:0.3};f.step(body);
+        body[16]={x:x+0.12,y:0.19};
+        let value;for(let i=0;i<3;i++) value=f.step(body);
+        assert.ok(Math.abs(value.raw.x-26)<1e-6);assert.ok(Math.abs(value.raw.y-26)<1e-6);
+        body[16]={x:x-0.12,y:0.41};
+        for(let i=0;i<3;i++) value=f.step(body);
+        assert.ok(Math.abs(value.raw.x-(width-26))<1e-6);assert.ok(Math.abs(value.raw.y-(height-26))<1e-6);
     }
 });
 
@@ -128,14 +136,16 @@ test('deliberate large moves remain responsive and lowering the hand recalibrate
     assert.ok(Math.abs(value.point.x-value.raw.x)<45,'large movements reach their target promptly');
     for(let i=0;i<20;i++) value=f.step(body,1000/30);
     assert.ok(Math.abs(value.point.x-value.raw.x)<9,'small remaining motion settles inside the deadzone');
+    const beforeLower=value.point;
     body[16].y=0.8;assert.equal(f.step(body),null);
     const shifted=pose(0.7);shifted[16]={x:0.7,y:0.3};
     value=f.step(shifted);
-    assert.ok(Math.abs(value.point.x-640)<0.01,'a fresh raise uses the new body position');
+    assert.ok(Math.abs(value.point.x-beforeLower.x)<0.01,'a fresh raise rebases the wrist while retaining the cursor');
 });
 
 test('hand-height hysteresis and a short confidence dropout do not bounce between hands',()=>{
-    const f=fixture(),body=pose();body[16]={x:0.3,y:0.45};f.step(body);
+    const f=fixture(),body=pose();body[16]={x:0.5,y:0.45};f.step(body);
+    body[16].x=0.46;for(let i=0;i<3;i++)f.step(body);
     body[15]={x:0.7,y:0.3};
     for(const y of [0.465,0.475,0.455,0.48,0.45]) {
         body[16].y=y;
@@ -143,4 +153,14 @@ test('hand-height hysteresis and a short confidence dropout do not bounce betwee
     }
     body[16].visibility=0.3;assert.equal(f.step(body),null,'uncertain input suspends clicks');
     body[16].visibility=1;assert.ok(f.step(body).raw.x>640,'the same hand recovers without selecting the other');
+});
+
+test('slow deliberate motion crosses the wrist noise band and reversing an edge swipe returns onscreen',()=>{
+    const f=fixture(),body=pose();body[16]={x:0.5,y:0.3};f.step(body);
+    for(let i=1;i<=60;i++){body[16].x=0.5-i*0.001;f.step(body,1000/30);}
+    assert.ok(f.calls.at(-1).raw.x>900,'small deliberate steps accumulate into a real move');
+    body[16].x=0.2;for(let i=0;i<3;i++)f.step(body);
+    assert.equal(f.calls.at(-1).raw.x,1254);
+    body[16].x=0.24;for(let i=0;i<3;i++)f.step(body);
+    assert.ok(f.calls.at(-1).raw.x<1200,'edge overshoot cannot trap a reversed swipe');
 });

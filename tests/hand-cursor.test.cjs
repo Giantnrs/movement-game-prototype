@@ -133,3 +133,22 @@ test('small-target assistance tolerates tremor but raw departure still pauses an
         assert.equal(result.reentered.progress,0);
     } finally {await page.close();}
 });
+
+test('fractional camera timestamps complete exactly two confirmed seconds without completing early',async()=>{
+    const page=await fixture();
+    try {
+        const result=await page.evaluate(()=>{
+            const point={x:220,y:120};
+            clock=1000/60;
+            control.updateHandCursor(point,point,clock);
+            control.updateHandCursor(point,point,clock+=100);
+            for(let i=0;i<18;i++)control.updateHandCursor(point,point,clock+=100);
+            const early=clicks.slice();
+            // Simulate the sub-nanosecond error from fractional frame-time sums.
+            control.updateHandCursor(point,point,clock+100-1e-10);
+            return {early,completed:clicks.slice()};
+        });
+        assert.deepEqual(result.early,[]);
+        assert.deepEqual(result.completed,['restart']);
+    } finally {await page.close();}
+});
