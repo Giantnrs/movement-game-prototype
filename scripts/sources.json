@@ -16,6 +16,8 @@
   "src/input/arm-postures.js",
   "src/input/lane-gestures.js",
   "src/input/player-tracking.js",
+  "src/input/hand-pointer.js",
+  "src/ui/hand-cursor.js",
   "src/input/calibration.js",
   "src/game/energy.js",
   "src/game/tracking-safety.js",

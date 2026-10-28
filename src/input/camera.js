@@ -171,13 +171,13 @@ function createCamera({ state, app }) {
         }
         trackingError = true;
         app.pose.onPoseResults({ landmarks: [] });
+        app.handPointer.resetHandPointer();
     }
 
     function predictWebcam() {
         let work;
         try {
             if (state.session.isCameraInitialized && !document.hidden &&
-                ['playing', 'calibrating', 'pre-calibrating'].includes(state.game.gameState) &&
                 videoElement.readyState >= 2 && !videoElement.paused && !videoElement.ended) {
                 const videoTime = videoElement.currentTime;
                 if (videoTime < lastObservedTime) { invalidatePoseFrame(); lastVideoTime = -1; }
@@ -203,6 +203,8 @@ function createCamera({ state, app }) {
                             inferenceMs = result.inferenceMs;
                             trackingError = false;
                             app.pose.onPoseResults({ landmarks: result.landmarks || [] });
+                            if (state.game.gameState !== phase || phase === 'playing') app.handPointer.resetHandPointer();
+                            else app.handPointer.observeHandPointer(app.playerTracking.getHandPointerPose(result.landmarks || []));
                             app.debug.sample('camera.frame', readCameraStatus());
                             app.debugPanel.drawDebugFrame(videoElement, result.landmarks || [], app.playerTracking.trackingReport());
                         }).catch(error => {
@@ -219,7 +221,7 @@ function createCamera({ state, app }) {
             inferencePending = false;
             reportInferenceError(error);
         } finally {
-            try { drawCameraFeeds(); }
+            try { app.handPointer.checkHandPointer(); drawCameraFeeds(); }
             finally { scheduleCameraFrame(); }
         }
         return work || inferenceWork;

@@ -2,6 +2,7 @@
 function createSession({ state, app }) {
     function startGameplay() {
         app.camera.invalidatePoseFrame();
+        app.handPointer.resetHandPointer();
         app.finishPhoto.resetFinishPhoto();
         app.trackingSafety.resetTrackingSafety();
         app.debug.record('game.start', { players: state.session.numPlayers, speedMultiplier: state.game.speedMultiplier,

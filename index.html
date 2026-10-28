@@ -7,10 +7,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="src/config/tailwind.js"></script>
     
-    <link rel="stylesheet" href="styles/game.css?v=9e9567053688">
+    <link rel="stylesheet" href="styles/game.css?v=09d01470398d">
 </head>
 <body class="text-gray-900 dark:text-white">
 
+<!-- Hand cursor -->
+<div id="hand-cursor" hidden aria-hidden="true" data-progress="0">
+    <svg viewBox="0 0 52 52" focusable="false">
+        <circle class="hand-cursor-track" cx="26" cy="26" r="22" />
+        <circle id="hand-cursor-progress" cx="26" cy="26" r="22" pathLength="100" />
+    </svg>
+    <span>✋</span>
+</div>
+<!-- End hand cursor -->
 <canvas id="bg-canvas"></canvas>
 
 <div id="game-container">

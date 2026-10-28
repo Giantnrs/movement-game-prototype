@@ -62,6 +62,31 @@ function fixture(count = 1, fps = 60) {
     return { state, app, tracker, step, feed, document, view: () => calibrationView, advance: ms => { now += ms; } };
 }
 
+test('hand pointer uses the sole pre-calibration operator or mirrored-left Player 1 without enrolling anyone', () => {
+    const one=fixture(),two=fixture(2);
+    const first=pose(0.75),second=pose(0.25);
+    assert.equal(one.tracker.getHandPointerPose([first]),first);
+    assert.equal(one.tracker.getHandPointerPose([first,second]),null);
+    assert.equal(two.tracker.getHandPointerPose([second,first]),first);
+    assert.equal(two.tracker.getHandPointerPose([first]),first);
+    assert.equal(two.tracker.getHandPointerPose([second]),null);
+    assert.equal(two.tracker.getHandPointerPose([first,pose(0.7)]),null);
+    assert.equal(two.tracker.getHandPointerPose([first,second,pose(0.95)]),null);
+    assert.deepEqual(Array.from(two.tracker.trackingStatuses()),['unregistered','unregistered']);
+    assert.equal(two.tracker.trackingReport().tracks.length,0);
+});
+
+test('after enrollment the hand pointer keeps Player 1 through reordered detections and ignores Player 2 and bystanders', () => {
+    const f=fixture(2),first=pose(0.75),second=pose(0.25),bystander=pose(0.95,{size:0.5});
+    f.step([first,second],true);
+    f.advance(100);
+    assert.equal(f.tracker.getHandPointerPose([second,bystander,first]),first);
+    f.advance(100);
+    assert.equal(f.tracker.getHandPointerPose([second,bystander]),null);
+    for(let i=0;i<10;i++) {f.advance(100);assert.equal(f.tracker.getHandPointerPose([second]),null);}
+    assert.equal(f.tracker.trackingReport().tracks.length,2,'missing Player 1 is never replaced');
+});
+
 test('only explicit calibration can enroll players, with exactly the intended people visible', () => {
     const { tracker, step } = fixture();
     const player = pose(0.7), bystander = pose(0.2);

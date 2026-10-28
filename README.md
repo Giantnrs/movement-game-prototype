@@ -123,6 +123,37 @@ CSS after deployment instead of keeping an older cached layout.
 All asset URLs are relative, so the game supports a repository Pages subpath.
 The HTTPS site can request camera access; CDN dependencies still need internet.
 
+## Hand-controlled buttons
+
+After starting the camera, raise either hand near shoulder height or above.
+Hand control works on interface screens only. Starting a run hides the cursor
+and cancels any pending click; it stays disabled during gameplay and tracking
+pauses, then becomes available again on the results screen.
+A mirrored hand cursor follows it. Move your hand to a visible button and keep
+the cursor there for two seconds; the green ring fills, then clicks the button.
+Move away or lower your hand before selecting the same button again. Mouse and
+keyboard controls still work. Only buttons are selected; typing and scrolling
+continue to use the normal controls.
+The control area stays fixed while your hand is raised, with smoothing to reduce
+camera jitter. Lower and raise your hand to recenter after changing position.
+Small movements near a button edge are tolerated. A brief tracking spike pauses
+the ring in amber without clicking; a clear movement away cancels the hold.
+
+In two-player mode, Player 1 (the person on the left in the mirrored preview)
+controls the cursor. Before calibration, stand on that side with the intended
+players clearly separated. After calibration, only the originally matched Player
+1 can control it; Player 2 and bystanders cannot take over. The range is relative
+to the player's shoulders, so they can reach the whole interface from their side.
+
+Missing/uncertain joints, a camera gap over 250 ms, leaving a button, switching
+hands, scrolling or using the mouse/keyboard cancels progress. Background or
+unfocused pages cannot click. Progress advances only with fresh camera results.
+The camera continues inference on warning, tutorial, dashboard and result screens
+so those buttons work too, including closing the final-photo dialog.
+
+This feature needs physical-webcam testing for comfort, lighting and pointing
+accuracy. Automated tests use synthetic pose coordinates and camera fixtures.
+
 ## Human testing with debug logs
 
 Open [debug mode](http://127.0.0.1:8080/?debug=1). The developer panel shows raw

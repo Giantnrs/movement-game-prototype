@@ -44,7 +44,7 @@ const functions = [...oldScripts[3][1].matchAll(/^(?:async )?function (\w+)\(/gm
 const currentHtml = fs.readFileSync(path.join(root,'index.html'),'utf8');
 const hudSection = html => html.match(/<!-- 1 PLAYER HUD -->[\s\S]*?(?=<!-- Login \()/)?.[0] || '';
 const changedHudIds = [...new Set([original,currentHtml].flatMap(html => [...hudSection(html).matchAll(/\bid="([^"]+)"/g)].map(match=>match[1])))];
-const changedWidgets = new Set([...changedHudIds, 'final-p1-energy', 'final-p2-energy', 'final-p1-energy-col', 'final-p2-energy-col', 'debug-panel', 'debug-camera', 'debug-summary', 'debug-status', 'debug-save-status',
+const changedWidgets = new Set([...changedHudIds, 'hand-cursor', 'hand-cursor-progress', 'final-p1-energy', 'final-p2-energy', 'final-p1-energy-col', 'final-p2-energy-col', 'debug-panel', 'debug-camera', 'debug-summary', 'debug-status', 'debug-save-status',
     'game-over-layout', 'finish-photo-single', 'finish-photo-single-canvas', 'finish-photo-dialog', 'finish-photo-title', 'finish-photo-close', 'finish-photo-dual-canvas',
     'debug-finish', 'debug-mark', 'debug-note', 'debug-download', 'leaderboard-body', 'gameover-leaderboard-body', 'streak-big-msg',
     'player-tracking-notice', 'player-tracking-message', 'btn-recalibrate-players',
@@ -334,6 +334,7 @@ async function compareScenario(run, options) {
 
 test('existing page markup, utility classes, and CSS are preserved around relocated assets and the tracking overlay', () => {
     const normalize = html => canonicalizeMedia(html).replace(/<style>[\s\S]*?<\/style>|<link rel="stylesheet" href="styles\/game\.css(?:\?v=[a-f\d]{12})?">/g, '<!-- styles -->')
+        .replace(/<!-- Hand cursor -->[\s\S]*?<!-- End hand cursor -->\n/g, '')
         .replace(/        <!-- 1 PLAYER HUD -->[\s\S]*?(?=        <!-- Login \()/g, '')
         .replaceAll(' data-energy-estimate', '')
         .replaceAll('>EST. ENERGY<', '>ENERGY<')
@@ -350,6 +351,7 @@ test('existing page markup, utility classes, and CSS are preserved around reloca
         .replace(/<!--[\s\S]*?-->/g, '').trimEnd();
     // Comments may change as obsolete prototype references are removed.
     const normalizeCss = css => canonicalizeMedia(css)
+        .replace(/\n\/\* Hand cursor \*\/[\s\S]*?\/\* End hand cursor \*\/\n?/g, '')
         .replace(/\n\/\* Compact gameplay HUD \*\/[\s\S]*?\/\* End compact gameplay HUD \*\/\n?/g, '')
         .replace(/\n\/\* Finish photo presentation \*\/[\s\S]*?\/\* End finish photo presentation \*\/\n?/g, '')
         .replace(/\n\/\* Debug panel:[\s\S]*?\/\* End debug panel \*\/\n?/g, '')
@@ -957,6 +959,232 @@ test('localized HUD tiles share height and fit desktop, portrait and landscape s
             }
             assert.deepEqual(errors,[]);
         } finally {await context.close();}
+    }
+});
+
+async function prepareHandPointer(count=1) {
+    const fixture=await prepare(false);
+    await fixture.page.evaluate(count=>{
+        window.__flushTimers();
+        document.getElementById('login-screen-wrap').classList.add('hidden');
+        document.getElementById('bg-intro').style.display='none';
+        document.querySelectorAll('#center-screens > div').forEach(el=>el.classList.add('hidden'));
+        const api=window.__gameTest;api.patch({numPlayers:count,isCameraInitialized:true,gameState:'loading'});
+        Object.defineProperty(document.getElementById('webcam-video'),'paused',{configurable:true,get:()=>false});
+        window.__handClicks=[];
+        for(const [id,left] of [['hand-test-a',15],['hand-test-b',60]]) {
+            const button=document.createElement('button');button.id=id;button.innerHTML='<span>'+id+'</span>';
+            button.style.cssText=`position:fixed;left:${left}%;top:35%;width:25%;height:80px;z-index:10000;pointer-events:auto`;
+            button.addEventListener('click',()=>window.__handClicks.push(id));document.body.appendChild(button);
+        }
+        window.__handPoseAt=(x,y,center=0.5,hand=16)=>{
+            const pose=Array.from({length:33},()=>({x:center,y:0.8,visibility:1,presence:1}));
+            for(const [id,px,py] of [[11,center+0.1,0.4],[12,center-0.1,0.4],[23,center+0.07,0.7],[24,center-0.07,0.7]]) pose[id]={x:px,y:py,visibility:1,presence:1};
+            const left=Math.max(0.02,center-0.24),right=Math.min(0.98,center+0.24);
+            pose[hand]={x:right-(x-26)/(innerWidth-52)*(right-left),y:0.13+(y-26)/(innerHeight-52)*0.33,visibility:1,presence:1};
+            return pose;
+        };
+        window.__handButtonPoint=id=>{const r=document.getElementById(id).getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};};
+        window.__feedHand=(point,frames=1,ms=100)=>{
+            for(let i=0;i<frames;i++) {window.__advancePoseTime(ms);api.call('observeHandPointer',window.__handPoseAt(point.x,point.y));}
+        };
+    },count);
+    return fixture;
+}
+
+test('hand cursor shows a progress ring, activates a button only after two seconds and never repeats a held click',async()=>{
+    const {context,page,errors}=await prepareHandPointer();
+    try {
+        const result=await page.evaluate(()=>{
+            const point=window.__handButtonPoint('hand-test-a');
+            const progress=()=>Number(document.getElementById('hand-cursor').dataset.progress);
+            window.__feedHand(point);window.__feedHand(point,10);
+            const half={progress:progress(),offset:document.getElementById('hand-cursor-progress').style.strokeDashoffset,clicks:window.__handClicks.length};
+            window.__feedHand(point,9);const before=window.__handClicks.length;
+            window.__feedHand(point);const clicked=window.__handClicks.slice();
+            window.__feedHand(point,30);const held=window.__handClicks.slice();
+            window.__feedHand({x:innerWidth/2,y:innerHeight-40},5);
+            window.__gameTest.call('resetHandPointer');window.__feedHand(point,21);
+            return {half,before,clicked,held,again:window.__handClicks.slice(),hidden:document.getElementById('hand-cursor').hidden};
+        });
+        assert.ok(Math.abs(result.half.progress-0.5)<1e-9);assert.equal(result.half.offset,'50');assert.equal(result.half.clicks,0);
+        assert.equal(result.before,0);assert.deepEqual(result.clicked,['hand-test-a']);assert.deepEqual(result.held,result.clicked);
+        assert.deepEqual(result.again,['hand-test-a','hand-test-a']);assert.equal(result.hidden,false);
+        assert.deepEqual(errors,[]);
+    }finally{await context.close();}
+});
+
+test('small hand tremor near a button edge completes dwell without restarting or repeating at 15, 30 and 60 fps',async()=>{
+    const {context,page,errors}=await prepareHandPointer();
+    try {
+        const results=await page.evaluate(()=>{
+            const api=window.__gameTest,button=document.getElementById('hand-test-a');
+            const rect=button.getBoundingClientRect();
+            const neighbor=document.getElementById('hand-test-b');
+            neighbor.style.left=`${rect.right+4}px`;neighbor.style.width='40px';
+            return [15,30,60].map(fps=>{
+                api.call('resetHandPointer');window.__handClicks=[];
+                const base={x:rect.right-3,y:rect.top+rect.height/2};
+                window.__feedHand(base,1,1000/fps);
+                const feed=n=>{for(let i=0;i<n;i++) window.__feedHand({x:base.x+(i%2?18:-18),y:base.y+Math.sin(i*1.7)*7},1,1000/fps);};
+                feed(Math.floor(fps*1.8));const early=window.__handClicks.length;
+                feed(fps);const clicks=window.__handClicks.slice();
+                feed(fps*3);
+                return {fps,early,clicks,held:window.__handClicks.slice()};
+            });
+        });
+        for(const result of results) {
+            assert.equal(result.early,0,`${result.fps}fps cannot click early`);
+            assert.deepEqual(result.clicks,['hand-test-a'],`${result.fps}fps edge jitter should still complete the hold`);
+            assert.deepEqual(result.held,result.clicks,'tremor cannot rearm a held click');
+        }
+        assert.deepEqual(errors,[]);
+    }finally{await context.close();}
+});
+
+test('a short raw-coordinate spike pauses dwell without clicking, while a real departure cancels it',async()=>{
+    const {context,page,errors}=await prepareHandPointer();
+    try {
+        const result=await page.evaluate(()=>{
+            const api=window.__gameTest,point=window.__handButtonPoint('hand-test-a'),away={x:innerWidth/2,y:innerHeight-40};
+            const update=raw=>{window.__advancePoseTime(100);api.call('updateHandCursor',point,raw,performance.now());};
+            const read=()=>({progress:Number(document.getElementById('hand-cursor').dataset.progress),
+                paused:document.getElementById('hand-cursor').dataset.paused,clicks:window.__handClicks.length});
+            for(let i=0;i<20;i++)update(point);const before=read();
+            update(away);const spike=read();update(point);const returned=read();update(point);const clicked=read();
+            api.call('clearHandCursor');window.__handClicks=[];
+            for(let i=0;i<15;i++)update(point);
+            for(let i=0;i<3;i++)update(away);const left=read();
+            update(point);const reentered=read();
+            return {before,spike,returned,clicked,left,reentered};
+        });
+        assert.ok(Math.abs(result.before.progress-0.95)<1e-9);
+        assert.equal(result.spike.progress,result.before.progress);assert.equal(result.spike.paused,'true');assert.equal(result.spike.clicks,0);
+        assert.equal(result.returned.progress,result.before.progress);assert.equal(result.returned.clicks,0,'uncertain intervals never count toward two seconds');
+        assert.equal(result.clicked.clicks,1);assert.equal(result.left.progress,0);assert.equal(result.left.clicks,0);assert.equal(result.reentered.progress,0);
+        assert.deepEqual(errors,[]);
+    }finally{await context.close();}
+});
+
+test('hand dwell cancels on leaving, changing buttons, loss, stale or repeated camera time and manual input',async()=>{
+    const {context,page,errors}=await prepareHandPointer();
+    try {
+        const result=await page.evaluate(()=>{
+            const api=window.__gameTest,a=window.__handButtonPoint('hand-test-a'),b=window.__handButtonPoint('hand-test-b');
+            const progress=()=>Number(document.getElementById('hand-cursor').dataset.progress);
+            window.__feedHand(a,16);window.__feedHand(b);const changed=progress();window.__feedHand(b,10);
+            const early=window.__handClicks.length;
+            api.call('resetHandPointer');window.__feedHand(a,16);window.__advancePoseTime(251);api.call('checkHandPointer');
+            const stale=document.getElementById('hand-cursor').hidden;
+            window.__feedHand(a);const resumed=progress();window.__feedHand(a,10);
+            api.call('observeHandPointer',window.__handPoseAt(a.x,a.y));const repeated=progress();
+            window.__feedHand(a,10);api.call('observeHandPointer',null);const missing=document.getElementById('hand-cursor').hidden;
+            window.__feedHand(a,10);document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));const keyboard=progress();
+            window.__feedHand(a,10);document.dispatchEvent(new PointerEvent('pointerdown'));const pointer=progress();
+            window.__feedHand(a,10);document.dispatchEvent(new Event('scroll'));const scroll=progress();
+            return {changed,early,stale,resumed,repeated,missing,keyboard,pointer,scroll,clicks:window.__handClicks};
+        });
+        assert.equal(result.changed,0);assert.equal(result.early,0);assert.equal(result.stale,true);assert.equal(result.resumed,0);
+        assert.equal(result.repeated,0);assert.equal(result.missing,true);assert.equal(result.keyboard,0);assert.equal(result.pointer,0);assert.equal(result.scroll,0);
+        assert.deepEqual(result.clicks,[]);assert.deepEqual(errors,[]);
+    }finally{await context.close();}
+});
+
+test('hand cursor cannot click disabled, hidden, covered or inert buttons and follows a native modal into the top layer',async()=>{
+    const {context,page,errors}=await prepareHandPointer();
+    try {
+        const result=await page.evaluate(()=>{
+            const api=window.__gameTest,button=document.getElementById('hand-test-a'),point=window.__handButtonPoint('hand-test-a');
+            const progress=()=>Number(document.getElementById('hand-cursor').dataset.progress);
+            const blocked=[];
+            button.disabled=true;window.__feedHand(point,25);blocked.push(progress());button.disabled=false;
+            button.setAttribute('aria-disabled','true');window.__feedHand(point,25);blocked.push(progress());button.removeAttribute('aria-disabled');
+            button.hidden=true;window.__feedHand(point,25);blocked.push(progress());button.hidden=false;
+            button.inert=true;window.__feedHand(point,25);blocked.push(progress());button.inert=false;
+            const cover=document.createElement('div');cover.style.cssText='position:fixed;inset:0;z-index:20000';document.body.appendChild(cover);
+            window.__feedHand(point,25);blocked.push(progress());cover.remove();
+            const dialog=document.createElement('dialog');dialog.id='hand-test-dialog';dialog.style.cssText='width:70vw;height:60vh';
+            const close=document.createElement('button');close.textContent='Close';close.style.cssText='position:fixed;left:35%;top:35%;width:25%;height:80px';
+            close.addEventListener('click',()=>dialog.close());dialog.appendChild(close);document.body.appendChild(dialog);dialog.showModal();
+            api.call('resetHandPointer');const rect=close.getBoundingClientRect(),modalPoint={x:rect.x+rect.width/2,y:rect.y+rect.height/2};
+            window.__feedHand(modalPoint);const inside=document.getElementById('hand-cursor').parentNode===dialog;
+            window.__feedHand(modalPoint,20);const closed=!dialog.open;
+            window.__feedHand({x:innerWidth/2,y:innerHeight-40});const restored=document.getElementById('hand-cursor').parentNode===document.body;
+            return {blocked,inside,closed,restored,clicks:window.__handClicks};
+        });
+        assert.deepEqual(result.blocked,[0,0,0,0,0]);assert.equal(result.inside,true);assert.equal(result.closed,true);assert.equal(result.restored,true);
+        assert.deepEqual(result.clicks,[]);assert.deepEqual(errors,[]);
+    }finally{await context.close();}
+});
+
+test('the running camera routes menu hand input in both modes, ignores Player 2, and survives inference failures',async()=>{
+    for(const count of [1,2]) {
+        const {context,page,errors}=await prepareHandPointer(count);
+        try {
+            const result=await page.evaluate(async count=>{
+                const api=window.__gameTest,video=document.getElementById('webcam-video');
+                api.patch({isCameraInitialized:false});await api.call('initCameraSequence');
+                let cameraTime=0;
+                for(const [key,get] of Object.entries({readyState:()=>2,videoWidth:()=>640,videoHeight:()=>480,currentTime:()=>cameraTime,ended:()=>false}))
+                    Object.defineProperty(video,key,{configurable:true,get});
+                const draw=CanvasRenderingContext2D.prototype.drawImage;
+                CanvasRenderingContext2D.prototype.drawImage=function(source,...args){if(source===video)return;return draw.call(this,source,...args);};
+                const point=window.__handButtonPoint('hand-test-a');
+                const first=window.__handPoseAt(point.x,point.y,count===1?0.5:0.75);
+                const second=window.__handPoseAt(point.x,point.y,0.25);
+                const feed=async(poses,n)=>{for(let i=0;i<n;i++){window.__advancePoseTime(100);cameraTime+=0.1;window.__handPointerTestPoses=poses;await api.call('predictWebcam');}};
+                if(count===2) await feed([second],25);
+                const other=window.__handClicks.length;
+                await feed(count===1?[first]:[second,first],11);const half=Number(document.getElementById('hand-cursor').dataset.progress);
+                window.__visionDetectFailure=true;await feed([],1);const failed=document.getElementById('hand-cursor').hidden;
+                window.__visionDetectFailure=false;await feed(count===1?[first]:[first,second],21);
+                return {other,half,failed,clicks:window.__handClicks,gameState:api.read().game.gameState,tracks:api.call('trackingReport').tracks.length};
+            },count);
+            assert.equal(result.other,0);assert.ok(Math.abs(result.half-0.5)<1e-9);assert.equal(result.failed,true);
+            assert.deepEqual(result.clicks,['hand-test-a']);assert.equal(result.gameState,'loading');assert.equal(result.tracks,0,'menu hand input never enrolls players');
+            assert.deepEqual(errors,[]);
+        }finally{await context.close();}
+    }
+});
+
+test('gameplay hides and disables hand clicks in both modes, including tracking pauses, then restores interface control',async()=>{
+    for(const count of [1,2]) {
+        const {context,page,errors}=await prepareHandPointer(count);
+        try {
+            const result=await page.evaluate(async count=>{
+                const api=window.__gameTest,video=document.getElementById('webcam-video');
+                api.patch({isCameraInitialized:false});await api.call('initCameraSequence');
+                let cameraTime=0;
+                for(const [key,get] of Object.entries({readyState:()=>2,videoWidth:()=>640,videoHeight:()=>480,currentTime:()=>cameraTime,ended:()=>false}))
+                    Object.defineProperty(video,key,{configurable:true,get});
+                const draw=CanvasRenderingContext2D.prototype.drawImage;
+                CanvasRenderingContext2D.prototype.drawImage=function(source,...args){if(source===video)return;return draw.call(this,source,...args);};
+                const point=window.__handButtonPoint('hand-test-a');
+                const first=window.__handPoseAt(point.x,point.y,count===1?0.5:0.75);
+                const second=window.__handPoseAt(point.x,point.y,0.25);
+                const lower=pose=>{const copy=structuredClone(pose);copy[16].y=0.8;return copy;};
+                const poses=count===1?[first]:[first,lower(second)];
+                window.__feedHand(point,16);
+                const partial=Number(document.getElementById('hand-cursor').dataset.progress);
+                const players=api.read().game.players;players.forEach(player=>{player.baseline=0.4;});api.patch({players});
+                api.call('lockPlayers',poses.map(lower));api.call('startGameplay');
+                const cursorOff=()=>document.getElementById('hand-cursor').hidden&&
+                    document.getElementById('hand-cursor').dataset.progress==='0'&&!document.querySelector('[data-hand-hover]');
+                const immediate=cursorOff();
+                const feed=async(values,n)=>{for(let i=0;i<n;i++){window.__advancePoseTime(100);cameraTime+=0.1;window.__handPointerTestPoses=values;await api.call('predictWebcam');}};
+                await feed(poses,30);const playing={off:cursorOff(),clicks:window.__handClicks.length,lane:api.read().game.players[0].lane};
+                await feed(count===1?[]:[first],25);
+                api.call('observeHandPointer',first);
+                const paused={off:cursorOff(),clicks:window.__handClicks.length,paused:api.call('isGameplayPaused')};
+                api.patch({gameState:'gameover'});await feed(poses,10);const early=window.__handClicks.length;
+                await feed(poses,40);
+                return {partial,immediate,playing,paused,early,clicks:window.__handClicks,phase:api.read().game.gameState};
+            },count);
+            assert.ok(result.partial>0&&result.partial<1);assert.equal(result.immediate,true,'entering gameplay clears the cursor immediately');
+            assert.equal(result.playing.off,true);assert.equal(result.playing.clicks,0);assert.notEqual(result.playing.lane,0,'normal game arm gestures remain active');
+            assert.deepEqual(result.paused,{off:true,clicks:0,paused:true});assert.equal(result.early,0,'previous menu dwell never carries into results');
+            assert.deepEqual(result.clicks,['hand-test-a']);assert.equal(result.phase,'gameover');assert.deepEqual(errors,[]);
+        }finally{await context.close();}
     }
 });
 

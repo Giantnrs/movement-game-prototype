@@ -192,5 +192,23 @@ function createPlayerTracking({ state, app }) {
                 samples: track.recovery?.samples || 0 } })) };
     }
 
-    return { resetEnrollment, lockPlayers, matchPlayers, trackingStatuses, trackingReport };
+    function getHandPointerPose(poses) {
+        // After explicit enrollment, only the original matched Player 1 can
+        // operate the UI, including on result/dashboard screens.
+        if (tracks.length) return matchPlayers(poses)[0] || null;
+        // Before calibration there are no identity locks. Use only an
+        // unambiguous intended position; this never creates a player slot.
+        if (!poses.length || poses.length > state.session.numPlayers) return null;
+        const candidates = poses.map(describe);
+        if (candidates.some(candidate => !candidate)) return null;
+        candidates.sort((a, b) => b.center.x - a.center.x);
+        if (state.session.numPlayers === 1) return candidates[0].landmarks;
+        const centerX = candidate => (candidate.landmarks[23].x + candidate.landmarks[24].x) / 2;
+        if (centerX(candidates[0]) < 0.54) return null;
+        if (candidates[1] && (centerX(candidates[1]) > 0.46 ||
+            centerX(candidates[0]) - centerX(candidates[1]) < 0.18)) return null;
+        return candidates[0].landmarks;
+    }
+
+    return { resetEnrollment, lockPlayers, matchPlayers, trackingStatuses, trackingReport, getHandPointerPose };
 }

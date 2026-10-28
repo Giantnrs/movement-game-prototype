@@ -482,6 +482,18 @@ html.dark #hud-p1 .hud-player-name { color:#93c5fd; }
 }
 /* End compact gameplay HUD */
 
+/* Hand cursor */
+#hand-cursor[hidden] { display:none !important; }
+#hand-cursor { position:fixed; z-index:2147483647; width:52px; height:52px; transform:translate(-50%,-50%); pointer-events:none; border-radius:50%; background:#0f172ae6; box-shadow:0 2px 12px #0008; }
+#hand-cursor svg { width:52px; height:52px; display:block; transform:rotate(-90deg); }
+#hand-cursor circle { fill:none; stroke-width:4px; }
+.hand-cursor-track { stroke:#94a3b8; }
+#hand-cursor-progress { stroke:#4ade80; stroke-linecap:round; stroke-dasharray:100; stroke-dashoffset:100; transition:stroke-dashoffset 80ms linear; }
+#hand-cursor[data-paused="true"] #hand-cursor-progress { stroke:#fbbf24; }
+#hand-cursor span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font:26px/1 system-ui,sans-serif; }
+[data-hand-hover="true"] { outline:4px solid #22c55e !important; outline-offset:3px; }
+/* End hand cursor */
+
 /* Finish photo presentation */
 #game-over-layout { display:contents; }
 #finish-photo-single[hidden] { display:none; }

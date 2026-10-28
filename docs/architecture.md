@@ -29,6 +29,8 @@ or new browser dependency.
 | `src/input/pose.js` | Calibration, matched input routing, posture recognition, suspension | `beginCalibration`, `onPoseResults`, `checkPlayerTracking`, `handlePlayerMovement` |
 | `src/input/calibration.js` | Position readiness, stable timing, neutral-pose sample averaging | `resetCalibration`, `updateCalibration` |
 | `src/input/player-tracking.js` | Finalized slots, body/motion matching, loss and ambiguity policy | `resetEnrollment`, `lockPlayers`, `matchPlayers`, `trackingStatuses` |
+| `src/input/hand-pointer.js` | Raised-hand selection, mirrored body-relative cursor mapping, smoothing and camera freshness | `observeHandPointer`, `checkHandPointer`, `resetHandPointer` |
+| `src/ui/hand-cursor.js` | Cursor/ring DOM, visible-button hit testing and two-second dwell clicks | `updateHandCursor`, `clearHandCursor` |
 | `src/ui/tracking-status.js` | Calibration guidance, recovery message and recalibration action presentation | `renderCalibration`, `refreshTrackingStatus`, `clearTrackingStatus` |
 | `src/input/arm-postures.js` | Extended level-arm duck geometry and evidence | `readLevelArms` |
 | `src/input/lane-gestures.js` | Per-player/arm raise cycles and stable 15-degree rearming | `detectLaneGesture`, `resetLaneGestures`, `interruptLaneGestures` |
@@ -176,12 +178,11 @@ inference errors retain the worker for subsequent frames. Transferred bitmaps
 are closed in the worker even on inference errors; capture/transfer failures
 release the main-thread bitmap.
 
-Camera owns a single in-flight capture/inference operation during preparation,
-calibration and gameplay. While it is pending,
+Camera owns a single in-flight capture/inference operation. While it is pending,
 its existing animation loop continues preview drawing and input watchdogs, and
 the game keeps rendering independently. Once free, it captures the newest video
 frame; no camera-frame backlog is created. Only landmarks and timing return to
-the main thread. Matching, calibration, gestures and game safety
+the main thread. Matching, calibration, gestures, hand control and game safety
 remain in their existing owners. Results over 250 ms old, from reversed camera
 time, hidden/paused/ended video, or a different phase/player count/calibration/run
 generation cannot provide input. Stale/error results suspend pose input; recovery
@@ -478,6 +479,67 @@ Compatibility exclusions cover only the replaced HUD fragment, its scoped CSS
 block and final energy values/labels. Dedicated geometry tests check equal tile
 heights, text fit, names and screen containment across desktop, portrait and
 landscape sizes in both themes. The original Git baseline remains unchanged.
+
+## Hand-controlled buttons
+
+The existing camera/model/stream now continues pose inference whenever the
+camera is running, including warning, tutorial, dashboard and results. No second
+stream, model or dependency is introduced. Hand control is disabled whenever
+`gameState` is `playing`, including tracking pauses. Session entry clears the
+cursor and pending dwell immediately; camera routing and the input watchdog
+keep it disabled throughout the run. Gameplay pose matching and gesture routing
+remain unchanged. Results/interface screens accept fresh Player 1 hand input
+again, with no dwell progress carried across gameplay.
+
+Outside gameplay, `player-tracking.getHandPointerPose()` keeps matching the
+original calibrated Player 1. Before enrollment it accepts a single clear torso
+in one-player mode, or a clear mirrored-left operator in two-player mode with any
+second torso clearly separated. It rejects extra/uncertain candidates. This UI
+selection does not enroll players, create profiles or change calibration; only
+explicit calibration still locks the game slots.
+
+`hand-pointer.js` uses reliable shoulders/hips and either raised wrist. The
+right hand is preferred when both first appear. The shoulder-based control area
+is captured on activation and retained until the hand is lowered, preventing
+frame-to-frame shoulder/hip noise from rescaling a stationary wrist. Lowering
+and raising the hand recenters the area. A near-shoulder activation/release band
+(0.2/0.4 torso heights) prevents flickering. A brief uncertain selected wrist
+suspends clicking without switching to the other hand. Switching hands clears
+dwell. Wrist x is mirrored across the captured range bounded by the camera
+frame; wrist y maps from above the shoulders to just below shoulder height.
+Player 1 can reach the full viewport from their half. Coordinates stay 26 px
+inside the screen. A three-observation median rejects isolated spikes, followed
+by a 3–7 px deadzone and time-based smoothing: 180 ms near rest, decreasing to
+55 ms for large deliberate moves. No game-tracking geometry is changed.
+
+`hand-cursor.js` uses actual topmost DOM hit testing for visible, enabled buttons
+and button roles. It highlights the target and fills an SVG ring for 2000 ms of
+confirmed observations, then calls the existing button click handler once.
+An acquired target has up to 14 px of visible-cursor edge tolerance (less for
+small buttons); a 28 px raw-wrist guard prevents hidden wrist noise from fighting
+the displayed cursor. Only the displayed pointer selects a neighboring button.
+A raw spike beyond this guard can pause progress for at most 120 ms, shown by
+an amber ring. These unconfirmed intervals never count toward dwell, and no
+click can complete on one. Clear visible departures, sustained raw departures,
+occlusion and disabled targets cancel the selection. Target acquisition still
+requires the displayed pointer to hit an actual visible button.
+Holding does not repeat; leaving or lowering the hand rearms it. Different targets,
+game phase/mode/modal changes, missing/uncertain hands, camera gaps over 250 ms,
+time reversal/repetition, manual input, scrolling, resize, hidden pages and focus
+loss cancel progress. Camera-frame watchdogs can clear progress but cannot finish
+a click. Native dialogs contain the cursor in their top layer, so their close
+buttons remain reachable. The cursor is decorative and does not replace keyboard
+or hardware mouse input. No new UI text requires translation.
+
+Baseline exclusions cover only the added cursor markup and its CSS block. Tests
+cover timing, the progress ring, no held repeats, cancellation, disabled/covered/
+inert buttons, native dialogs, mirrored mapping/range, confidence, Player 1
+selection without enrollment, camera errors and inference on menu screens.
+Noise tests at 15/30/60 camera observations per second cover torso jitter, wrist
+noise/spikes, near-edge tremor beside a neighboring button, intentional movement,
+height hysteresis, brief wrist uncertainty and paused-versus-canceled dwell. Existing
+calibration, matching, movement, scoring and render comparisons remain anchored
+to `6778c34`. Physical camera testing remains necessary for reach and accuracy.
 
 ## Finish photo presentation
 
