@@ -504,6 +504,75 @@ test('resizing preserves viewport and original projection behavior', async () =>
     });
 });
 
+test('clear! in either name field clears only both local boards without logging in or starting play', async () => {
+    for (const [id, submit, lang] of [
+        ['player-name', false, 'en'], ['player2-name', false, 'mi'],
+        ['player-name', true, 'mi'], ['player2-name', true, 'en']
+    ]) {
+        const { context, page, errors } = await prepare(false, { stored: {
+            leaderboard_data_version: '1', streak_data_version: '1',
+            game_leaderboard_normal: JSON.stringify([{ name: 'Aroha', score: 100 }]),
+            game_leaderboard_chill: JSON.stringify([{ name: 'Moana', score: 50 }]),
+            player_name: 'Aroha', player2_name: 'Moana', current_streak: '2',
+            last_login_date: '2026-10-24', game_theme: 'dark'
+        } });
+        try {
+            if (id === 'player2-name') {
+                await page.evaluate(() => {
+                    for (const key of ['btn-continue', 'btn-streak-next', 'btn-mode-2p']) document.getElementById(key).click();
+                });
+            }
+            await page.evaluate(lang => window.__gameTest.call('setLoginLang', lang), lang);
+            const before = await page.evaluate(() => {
+                window.__gameTest.call('renderLeaderboard');
+                window.__gameTest.call('renderGameOverLeaderboard');
+                return { storage: { ...localStorage }, state: window.__gameTest.read(),
+                    alerts: window.__effects.filter(effect => effect[0] === 'alert').length };
+            });
+            await page.locator(`#${id}`).fill('clear');
+            await page.locator(`#${id}`).fill('clear!ish');
+            assert.deepEqual(await page.evaluate(() => ({ ...localStorage })), before.storage,
+                'partial commands and ordinary names do not clear scores');
+            if (submit) {
+                // Also handle values restored/autofilled without an input event.
+                await page.evaluate(id => { document.getElementById(id).value = ' CLEAR! '; }, id);
+                await page.evaluate(id => document.getElementById(id === 'player-name' ? 'btn-continue' : 'btn-play').click(), id);
+            } else {
+                await page.locator(`#${id}`).fill('');
+                await page.locator(`#${id}`).pressSequentially('clear!');
+            }
+            const after = await page.evaluate(id => ({
+                storage: { ...localStorage }, state: window.__gameTest.read(),
+                value: document.getElementById(id).value, focused: document.activeElement.id,
+                tables: ['leaderboard-body', 'gameover-leaderboard-body'].map(key => document.getElementById(key).textContent),
+                alerts: window.__effects.filter(effect => effect[0] === 'alert').map(effect => effect[1])
+            }), id);
+            const expectedStorage = { ...before.storage };
+            delete expectedStorage.game_leaderboard_normal;
+            delete expectedStorage.game_leaderboard_chill;
+            assert.deepEqual(after.storage, expectedStorage, 'only leaderboard records are removed');
+            assert.deepEqual(after.state, before.state, 'the command does not advance the session');
+            assert.equal(after.value, '');
+            assert.equal(after.focused, id);
+            assert.equal(after.alerts.length, before.alerts + 1);
+            assert.equal(after.alerts.at(-1), lang === 'mi'
+                ? 'Kua mukua ngā kaute o tēnei pūtirotiro.' : 'Local leaderboards cleared.');
+            for (const table of after.tables) assert.match(table, lang === 'mi' ? /Kāore anō he kaute/ : /No scores yet/);
+            await page.reload({ waitUntil: 'load' });
+            const reloaded = await page.evaluate(() => {
+                const api = window.__gameTest;
+                const empty = ['game_leaderboard_normal', 'game_leaderboard_chill'].map(key => api.call('getLeaderboard', key));
+                api.patch({ currentPlayerName: 'Aroha' });
+                api.call('saveScore', 25);
+                return { empty, saved: api.call('getLeaderboard') };
+            });
+            assert.deepEqual(reloaded.empty, [[], []], 'cleared boards stay empty after reload');
+            assert.deepEqual(reloaded.saved, [{ name: 'Aroha', score: 25 }], 'new completed scores can still be saved');
+            assert.deepEqual(errors, []);
+        } finally { await context.close(); }
+    }
+});
+
 test('legacy leaderboard data is cleared once; real scores persist, rank, and remain separate by mode', async () => {
     const { context, page, errors } = await prepare(false, { stored: {
         game_leaderboard_normal: '[{"name":"WaikatoChamp","score":187}]',

@@ -2,6 +2,17 @@
 function createControls({ state, app }) {
     let calibrationTimeout;
 
+    function handleNameCommand(input) {
+        if (input.value.trim().toLowerCase() !== 'clear!') return false;
+        app.scores.clearLeaderboards();
+        input.value = '';
+        app.localization.updateLoginNameCheck();
+        const lang = document.getElementById('lang-select').value;
+        alert(app.localization.translations[lang].leaderboardsCleared);
+        input.focus();
+        return true;
+    }
+
     function startCalibration() {
         clearTimeout(calibrationTimeout);
         app.pose.beginCalibration();
@@ -24,7 +35,12 @@ function createControls({ state, app }) {
             const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
             app.preferences.updateTheme(next);
         });
-        document.getElementById('player-name').addEventListener('input', app.localization.updateLoginNameCheck);
+        for (const id of ['player-name', 'player2-name']) {
+            document.getElementById(id).addEventListener('input', (e) => {
+                handleNameCommand(e.target);
+                if (id === 'player-name') app.localization.updateLoginNameCheck();
+            });
+        }
         document.getElementById('player-name').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') document.getElementById('btn-continue').click();
         });
@@ -77,6 +93,7 @@ function createControls({ state, app }) {
         });
 
         document.getElementById('btn-continue').addEventListener('click', () => {
+            if (handleNameCommand(document.getElementById('player-name'))) return;
             const name = document.getElementById('player-name').value.trim();
             if (!name) {
                 const lang = document.getElementById('lang-select').value;
@@ -137,6 +154,7 @@ function createControls({ state, app }) {
         document.getElementById('btn-play').addEventListener('click', () => {
             // Read P2 name if in 2P mode
             if (state.session.numPlayers === 2) {
+                if (handleNameCommand(document.getElementById('player2-name'))) return;
                 const p2name = document.getElementById('player2-name').value.trim();
                 if (!p2name) {
                     alert('Please enter Player 2\'s name.');

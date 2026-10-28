@@ -218,6 +218,13 @@ The leaderboard and daily streak behavior were subsequently changed by request:
   Startup consolidates both existing boards in place without re-running demo
   cleanup or changing the version key. Runtime reads remain pure; completed
   runs save through `saveScore()`.
+- Typing `clear!` in either name field clears both local mode boards through
+  `scores.clearLeaderboards()`, refreshes both tables, empties the field and
+  shows a localized confirmation. Matching ignores surrounding whitespace and
+  case; submission also checks the command. It does not log in, start the camera,
+  save the command as a name, or change names, preferences, streaks or migration
+  keys. Dedicated tests cover this command separately from the unchanged
+  `6778c34` baseline; ordinary names retain their existing behavior.
 - `streak_data_version=1` clears the prototype's unreliable streak counters once,
   including counts inflated for special names. A fresh login starts at day one.
   Names, language, and theme preferences are retained.

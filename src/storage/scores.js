@@ -48,6 +48,13 @@ function createScores({ state, app }) {
         }
     }
 
+    function clearLeaderboards() {
+        localStorage.removeItem('game_leaderboard_normal');
+        localStorage.removeItem('game_leaderboard_chill');
+        app.leaderboards.renderLeaderboard();
+        app.leaderboards.renderGameOverLeaderboard();
+    }
+
     function saveScore(newScore) {
         if (!Number.isFinite(newScore) || Math.floor(newScore) <= 0) return;
         const name = typeof state.session.currentPlayerName === 'string' ? state.session.currentPlayerName.trim() : '';
@@ -78,5 +85,5 @@ function createScores({ state, app }) {
         return { current: ranked[index], rows: ranked.slice(start, start + 3) };
     }
 
-    return { getLBKey, getLeaderboard, saveScore, getLiveRanking, playerNameKey };
+    return { getLBKey, getLeaderboard, clearLeaderboards, saveScore, getLiveRanking, playerNameKey };
 }
