@@ -140,7 +140,7 @@ function createEntities({ state, app }) {
         ctx.restore();
     }
 
-    function updateAndDrawPlayer(p, subW, playerIndex) {
+    function updateAndDrawPlayer(p, subW, playerIndex, paint = true) {
         const basePos = app.world.getScreenPos(p.lane, 0.85, subW);
 
         if (p.renderX === undefined) p.renderX = basePos.x;
@@ -192,6 +192,10 @@ function createEntities({ state, app }) {
         p.renderArmL += (targetArmL - p.renderArmL) * 0.3;
         p.renderArmR += (targetArmR - p.renderArmR) * 0.3;
 
+        // Consume the original jump random value even on an unpainted step.
+        const flameHeight = p.isJumping ? 42 + Math.random() * 28 : 0;
+        if (!paint) return;
+
         // Draw shield ring behind player
         drawShieldRing(p, subW);
 
@@ -213,7 +217,7 @@ function createEntities({ state, app }) {
             ctx.fillStyle = '#fb923c';
             ctx.beginPath();
             ctx.moveTo(-w/3, 0);
-            ctx.lineTo(0, 42 + Math.random() * 28);
+            ctx.lineTo(0, flameHeight);
             ctx.lineTo(w/3, 0);
             ctx.fill();
         }

@@ -2,6 +2,21 @@
 function createScene({ state, app }) {
     const { ctx } = app.viewport;
 
+    function advanceVisualFrame() {
+        const subW = state.viewport.gameWidth / state.session.numPlayers;
+        for (let i = 0; i < state.session.numPlayers; i++) {
+            app.world.advanceBackground(subW);
+            state.game.orbs.sort((a,b) => a.depth - b.depth);
+            state.game.obstacles.sort((a,b) => a.depth - b.depth);
+            if (playerVisible(i)) app.entities.updateAndDrawPlayer(state.game.players[i], subW, i, false);
+        }
+    }
+
+    function playerVisible(i) {
+        const player = state.game.players[i];
+        return player.lives > 0 && !player.eliminated && (player.invulnerableFrames === 0 || Math.floor(state.game.frameCount / 5) % 2 === 0);
+    }
+
     function renderGameplay() {
         ctx.clearRect(0, 0, state.viewport.gameWidth, state.viewport.gameHeight);
         const subW = state.viewport.gameWidth / state.session.numPlayers;
@@ -24,7 +39,7 @@ function createScene({ state, app }) {
                 if (obs.active) app.entities.drawObstacle(obs, subW);
             });
 
-            if (state.game.players[i].lives > 0 && !state.game.players[i].eliminated && (state.game.players[i].invulnerableFrames === 0 || Math.floor(state.game.frameCount / 5) % 2 === 0)) {
+            if (playerVisible(i)) {
                 app.entities.updateAndDrawPlayer(state.game.players[i], subW, i);
             }
             ctx.restore();
@@ -36,5 +51,5 @@ function createScene({ state, app }) {
         }
     }
 
-    return { renderGameplay };
+    return { renderGameplay, advanceVisualFrame };
 }

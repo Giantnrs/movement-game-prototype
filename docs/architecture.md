@@ -24,7 +24,8 @@ or new browser dependency.
 | `src/rendering/world.js` | Original perspective projection, ground, sky | `getScreenPos`, `drawBackground`, `drawStaticBackground`, `horizonY` |
 | `src/rendering/entities.js` | Obstacles, orbs, player animation, shield graphics | `drawOrb`, `drawObstacle`, `updateAndDrawPlayer` |
 | `src/rendering/scene.js` | Viewport clipping, draw order, split-screen divider | `renderGameplay` |
-| `src/input/camera.js` | MediaPipe loading, camera lifecycle, mirrored calibration/gameplay feeds | `initCameraSequence`, `predictWebcam`, `showCalibrationPreview`, `showCameraForMode` |
+| `src/input/pose-inference.js` | Dedicated MediaPipe worker, model loading, bitmap transfer and request lifecycle | `initializePoseInference`, `inferPose` |
+| `src/input/camera.js` | Camera lifecycle, fresh worker-result routing, mirrored calibration/gameplay feeds | `initCameraSequence`, `predictWebcam`, `showCalibrationPreview`, `showCameraForMode` |
 | `src/input/pose.js` | Calibration, matched input routing, posture recognition, suspension | `beginCalibration`, `onPoseResults`, `checkPlayerTracking`, `handlePlayerMovement` |
 | `src/input/calibration.js` | Position readiness, stable timing, neutral-pose sample averaging | `resetCalibration`, `updateCalibration` |
 | `src/input/player-tracking.js` | Finalized slots, body/motion matching, loss and ambiguity policy | `resetEnrollment`, `lockPlayers`, `matchPlayers`, `trackingStatuses` |
@@ -93,8 +94,8 @@ flowchart LR
 ```
 
 `advanceFrame()` performs the original logical frame and returns `false` if the
-run ended. `gameLoop()` renders only a surviving frame, then schedules the next
-animation callback. The scene draws background, orbs, obstacles, player, then
+run ended. `gameLoop()` accumulates elapsed animation-frame time into 60 Hz logical steps
+and renders only the last surviving step, then schedules the next callback. The scene draws background, orbs, obstacles, player, then
 the split-screen divider in the original order.
 
 The build concatenates factory declarations and the composition root into one
@@ -142,6 +143,63 @@ versions. The original logic includes behavior that may look unusual:
   recreate the full player object.
 
 Changing these requires a separate behavior change and intentional test updates.
+
+## Intentional performance timing and worker changes
+
+Gameplay now follows elapsed time at the original 60-logical-frames-per-second
+pace. `simulation.gameLoop(timestamp)` retains the original `advanceFrame()`
+thresholds and collision checks on every fixed step, independent of display rate.
+Fractional time carries forward; at high refresh rates callbacks without a due
+step do not advance or repaint gameplay. At lower rates, intermediate steps call
+`scene.advanceVisualFrame()` without Canvas work, and the last step renders in
+the original order. World particle/twinkle updates and player interpolation still
+advance per logical step, including random consumption in each viewport and
+jump flames. The original two-player sky update order is preserved.
+
+Tracking pause/resume, session start, and visibility changes reset the private
+frame clock. Hidden-page callbacks do not update or render. A negative time delta
+or a gap over 250 ms discards accumulated time rather than replaying stale input
+through a large catch-up burst. This bounds each callback to 15 logical steps.
+Energy retains its independent real-time estimator and pause exclusion.
+
+`pose-inference.js` owns one dedicated classic Worker created from its bundled
+runtime function via a temporary Blob URL. It loads the unchanged MediaPipe
+0.10.3 runtime and Lite model with four pose candidates. GPU inference uses an
+OffscreenCanvas; GPU initialization failure retries CPU inference inside the
+worker. There is no main-thread inference fallback. The Blob URL is revoked after
+worker creation. Worker creation/import/model failures preserve the startup error
+flow; model initialization is shared across callers. Requests have IDs and
+bounded timeouts (30 seconds to initialize, 10 seconds per frame, allowing cold
+GPU shader compilation). Worker crashes/timeouts terminate that worker and reject
+its request; a subsequent request can initialize a replacement. Individual
+inference errors retain the worker for subsequent frames. Transferred bitmaps
+are closed in the worker even on inference errors; capture/transfer failures
+release the main-thread bitmap.
+
+Camera owns a single in-flight capture/inference operation during preparation,
+calibration and gameplay. While it is pending,
+its existing animation loop continues preview drawing and input watchdogs, and
+the game keeps rendering independently. Once free, it captures the newest video
+frame; no camera-frame backlog is created. Only landmarks and timing return to
+the main thread. Matching, calibration, gestures and game safety
+remain in their existing owners. Results over 250 ms old, from reversed camera
+time, hidden/paused/ended video, or a different phase/player count/calibration/run
+generation cannot provide input. Stale/error results suspend pose input; recovery
+still requires fresh matching observations through the existing gates. Explicit
+calibration and session start invalidate outstanding results without creating a
+second stream, model or loop. Existing diagnostics remain opt-in with no images.
+
+The original compatibility baseline stays at `6778c34`; its 60 Hz game state,
+random order and Canvas pixels remain compared. The camera-option exclusion now
+also covers the worker's OffscreenCanvas, whose transfer/lifecycle is verified
+separately. Browser doubles execute the worker protocol asynchronously while
+retaining deterministic external model responses. Dedicated tests compare full
+simulation/animation/random state at 15/20/30/60/120/144 Hz in both player and
+speed modes; check collisions/game-over, pauses, visibility, stalls and reversed
+clocks; reject stale or cross-session results; and exercise worker errors,
+restart, transfers, GPU-to-CPU initialization fallback and a real worker that
+runs blocking inference while main-thread UI timers stay responsive. Physical
+webcam and low-end hardware measurements remain separate verification steps.
 
 ## Intentional progress and leaderboard changes
 

@@ -1,13 +1,18 @@
 /** camera: see docs/architecture.md for ownership and compatibility rules. */
 function createCamera({ state, app }) {
     const videoElement = document.getElementById('webcam-video');
-    let poseLandmarker = null;
     let lastVideoTime = -1;
-    let visionModule = null;
     let cameraFrameId = null;
     let trackingError = false;
     let playbackError = false;
     let inferenceMs = 0;
+    let inferencePending = false;
+    let inferenceWork;
+    let poseGeneration = 0;
+    let lastObservedTime = -1;
+
+    function invalidatePoseFrame() { poseGeneration++; }
+    document.addEventListener('visibilitychange', invalidatePoseFrame);
 
     function scheduleCameraFrame() {
         if (!state.session.isCameraInitialized || cameraFrameId !== null) return;
@@ -28,32 +33,15 @@ function createCamera({ state, app }) {
     }
 
     async function initCameraSequence() {
-        if (!poseLandmarker) {
-            try {
-                try {
-                    visionModule = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm");
-                } catch (e) {
-                    visionModule = await import("https://cdn.skypack.dev/@mediapipe/tasks-vision@0.10.3");
-                }
-                const visionTask = await visionModule.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
-                poseLandmarker = await visionModule.PoseLandmarker.createFromOptions(visionTask, {
-                    baseOptions: {
-                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
-                        delegate: "GPU"
-                    },
-                    runningMode: "VIDEO",
-                    // Extra candidates can be rejected without displacing a
-                    // registered player from the detector's two playable slots.
-                    numPoses: 4
-                });
-            } catch(e) {
-                app.debug.record('camera.model.error', { message: String(e) });
-                console.error("AI Load Error:", e);
-                alert("Failed to load AI engine. Please check your internet connection.");
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('dashboard-screen').classList.remove('hidden');
-                return;
-            }
+        try {
+            await app.poseInference.initializePoseInference();
+        } catch(e) {
+            app.debug.record('camera.model.error', { message: String(e) });
+            console.error("AI Load Error:", e);
+            alert("Failed to load AI engine. Please check your internet connection.");
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            return;
         }
 
         if (!state.session.isCameraInitialized) {
@@ -118,6 +106,13 @@ function createCamera({ state, app }) {
         drawCameraFeeds();
     }
 
+    function refreshCalibrationCameraStatus() {
+        if (!['pre-calibrating', 'calibrating'].includes(state.game.gameState) || videoElement.readyState < 2 || videoElement.paused || videoElement.ended) return;
+        calibrationStatus.textContent = trackingError
+            ? 'Camera is live, but body tracking is unavailable. Try recalibrating.' : 'Waiting for camera...';
+        calibrationStatus.hidden = !trackingError;
+    }
+
     function drawCameraFeeds() {
         const calibrating = ['pre-calibrating', 'calibrating'].includes(state.game.gameState);
         if (!state.session.isCameraInitialized || videoElement.readyState < 2 || videoElement.paused || videoElement.ended) {
@@ -137,9 +132,7 @@ function createCamera({ state, app }) {
             if (camCalibration.width !== vw) camCalibration.width = vw;
             if (camCalibration.height !== vh) camCalibration.height = vh;
             ctxCalibration.drawImage(videoElement, 0, 0, vw, vh);
-            calibrationStatus.textContent = trackingError
-                ? 'Camera is live, but body tracking is unavailable. Try recalibrating.' : 'Waiting for camera...';
-            calibrationStatus.hidden = !trackingError;
+            refreshCalibrationCameraStatus();
         }
 
         if (state.session.numPlayers === 1) {
@@ -171,34 +164,65 @@ function createCamera({ state, app }) {
         }
     }
 
+    function reportInferenceError(error) {
+        if (!trackingError) {
+            console.error('Body tracking failed:', error);
+            app.debug.record('camera.inference.error', { message: String(error), stack: String(error.stack || '').slice(0, 2000) });
+        }
+        trackingError = true;
+        app.pose.onPoseResults({ landmarks: [] });
+    }
+
     function predictWebcam() {
+        let work;
         try {
-            if (['playing', 'calibrating', 'pre-calibrating'].includes(state.game.gameState) &&
+            if (state.session.isCameraInitialized && !document.hidden &&
+                ['playing', 'calibrating', 'pre-calibrating'].includes(state.game.gameState) &&
                 videoElement.readyState >= 2 && !videoElement.paused && !videoElement.ended) {
-                const startTimeMs = performance.now();
-                if (lastVideoTime !== videoElement.currentTime && poseLandmarker) {
-                    lastVideoTime = videoElement.currentTime;
-                    const results = poseLandmarker.detectForVideo(videoElement, startTimeMs);
-                    inferenceMs = Math.round((performance.now() - startTimeMs) * 10) / 10;
-                    trackingError = false;
-                    app.pose.onPoseResults(results);
-                    app.debug.sample('camera.frame', readCameraStatus());
-                    app.debugPanel.drawDebugFrame(videoElement, results.landmarks || [], app.playerTracking.trackingReport());
+                const videoTime = videoElement.currentTime;
+                if (videoTime < lastObservedTime) { invalidatePoseFrame(); lastVideoTime = -1; }
+                lastObservedTime = videoTime;
+                if (lastVideoTime !== videoTime && !inferencePending) {
+                    lastVideoTime = videoTime;
+                    const capturedAt = performance.now();
+                    const generation = poseGeneration;
+                    const phase = state.game.gameState;
+                    const count = state.session.numPlayers;
+                    inferencePending = true;
+                    // Capture/transfer one frame. While it runs, preview and game
+                    // callbacks continue; the next request takes the newest video.
+                    work = createImageBitmap(videoElement).then(bitmap => app.poseInference.inferPose(bitmap, capturedAt))
+                        .then(result => {
+                            const age = performance.now() - capturedAt;
+                            if (generation !== poseGeneration || phase !== state.game.gameState || count !== state.session.numPlayers) return;
+                            if (document.hidden || videoElement.paused || videoElement.ended ||
+                                videoElement.currentTime < videoTime || age < 0 || age > 250) {
+                                reportInferenceError(new Error('Body tracking frame is stale'));
+                                return;
+                            }
+                            inferenceMs = result.inferenceMs;
+                            trackingError = false;
+                            app.pose.onPoseResults({ landmarks: result.landmarks || [] });
+                            app.debug.sample('camera.frame', readCameraStatus());
+                            app.debugPanel.drawDebugFrame(videoElement, result.landmarks || [], app.playerTracking.trackingReport());
+                        }).catch(error => {
+                            if (generation === poseGeneration && phase === state.game.gameState && count === state.session.numPlayers) reportInferenceError(error);
+                        }).finally(() => {
+                            inferencePending = false;
+                            inferenceWork = undefined;
+                            refreshCalibrationCameraStatus();
+                        });
+                    inferenceWork = work;
                 }
             }
         } catch (error) {
-            if (!trackingError) {
-                console.error('Body tracking failed:', error);
-                app.debug.record('camera.inference.error', { message: String(error), stack: String(error.stack || '').slice(0, 2000) });
-            }
-            trackingError = true;
-            app.pose.onPoseResults({ landmarks: [] });
+            inferencePending = false;
+            reportInferenceError(error);
         } finally {
-            // A failed inference must never prevent camera presentation or stop
-            // subsequent frames. Keep the loop singular across replay/resume.
             try { drawCameraFeeds(); }
             finally { scheduleCameraFrame(); }
         }
+        return work || inferenceWork;
     }
 
     function readCameraStatus() {
@@ -210,5 +234,5 @@ function createCamera({ state, app }) {
             trackState: track?.readyState, inferenceMs, trackingError, playbackError };
     }
 
-    return { videoElement, poseLandmarker, lastVideoTime, visionModule, initCameraSequence, camSingle, camLeft, camRight, ctxCamSingle, ctxCamLeft, ctxCamRight, drawCameraFeeds, showCalibrationPreview, showCameraForMode, predictWebcam, readCameraStatus };
+    return { videoElement, invalidatePoseFrame, initCameraSequence, camSingle, camLeft, camRight, ctxCamSingle, ctxCamLeft, ctxCamRight, drawCameraFeeds, showCalibrationPreview, showCameraForMode, predictWebcam, readCameraStatus };
 }

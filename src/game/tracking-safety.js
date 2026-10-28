@@ -27,6 +27,7 @@ function createTrackingSafety({ state, app }) {
             if (!paused) {
                 app.energy.suspendEnergy(true);
                 paused = true;
+                app.simulation?.resetFrameClock();
                 app.audio.bgMusic.pause();
                 app.debug.record('game.pause', { reason: next, detected: report.rawCount, expected: state.session.numPlayers, statuses });
             }
@@ -35,6 +36,7 @@ function createTrackingSafety({ state, app }) {
             if (report.frameId !== lastFrame) { healthyFrames++; lastFrame = report.frameId; }
             if (now - healthySince >= RESUME_MS && healthyFrames >= 3) {
                 paused = false;
+                app.simulation?.resetFrameClock();
                 app.energy.suspendEnergy(false);
                 app.debug.record('game.resume', { healthyMs: now - healthySince, healthyFrames });
                 app.audio.bgMusic.play().catch(error => app.debug.record('audio.resume.error', { message: String(error) }));

@@ -11,6 +11,7 @@
   "src/ui/notifications.js",
   "src/rendering/viewport.js",
   "src/audio/sound.js",
+  "src/input/pose-inference.js",
   "src/input/camera.js",
   "src/input/arm-postures.js",
   "src/input/lane-gestures.js",
