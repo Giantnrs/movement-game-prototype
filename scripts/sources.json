@@ -19,6 +19,7 @@
   "src/input/hand-pointer.js",
   "src/ui/hand-cursor.js",
   "src/input/calibration.js",
+  "src/rendering/calibration-preview.js",
   "src/game/energy.js",
   "src/game/tracking-safety.js",
   "src/ui/debug-panel.js",

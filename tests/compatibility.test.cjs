@@ -2272,3 +2272,81 @@ test('level arms or crouching duck while chest hands stay neutral in both modes'
         } finally {await context.close();}
     }
 });
+
+test('calibration selects players among bystanders, draws mirrored zone labels and pauses overlaps independently', async () => {
+    for (const count of [1, 2]) {
+        const { context, page, errors } = await prepare(false);
+        try {
+            const result = await page.evaluate(count => {
+                const api = window.__gameTest;
+                api.patch({ numPlayers:count });
+                api.call('setLoginLang', count === 1 ? 'en' : 'mi');
+                document.getElementById('login-screen-wrap').classList.add('hidden');
+                document.getElementById('start-btn').click();
+                window.__flushTimers();
+                const pose = (x, size = 1) => {
+                    const points = Array.from({length:33}, () => ({ x, y:0.4, visibility:1, presence:1 }));
+                    points[11].x = x + 0.1 * size; points[12].x = x - 0.1 * size;
+                    points[23] = { x:x + 0.07 * size, y:0.4 + 0.3 * size };
+                    points[24] = { x:x - 0.07 * size, y:0.4 + 0.3 * size };
+                    return points;
+                };
+                const players = count === 1 ? [pose(0.5)] : [pose(0.75), pose(0.25)];
+                const bystanders = [pose(0.02,0.3), pose(0.98,0.3)];
+                const feed = (people, frames) => {
+                    for (let i = 0; i < frames; i++) api.call('onPoseResults', {landmarks:i % 2 ? people : [...people].reverse()});
+                };
+                feed([...bystanders, ...players],40);
+                const before = api.call('calibrationView');
+                const beforeProgress = parseFloat(document.getElementById('calibration-bar').style.width);
+                feed([...players, pose(count === 1 ? 0.56 : 0.88,0.6)],10);
+                const paused = api.call('calibrationView');
+                const canvas = document.getElementById('cam-calibration');
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#1f2937'; ctx.fillRect(0,0,canvas.width,canvas.height);
+                const labels = [], rectangles = [];
+                const fillText = ctx.fillText.bind(ctx), strokeRect = ctx.strokeRect.bind(ctx);
+                ctx.fillText = (text,x,y) => {
+                    const transform = ctx.getTransform();
+                    labels.push({text, scale:transform.a, offset:transform.e}); fillText(text,x,y);
+                };
+                ctx.strokeRect = (...rect) => { rectangles.push({rect,color:ctx.strokeStyle}); strokeRect(...rect); };
+                api.call('drawCalibrationOverlay',ctx,canvas.width,canvas.height);
+                ctx.fillText = fillText; ctx.strokeRect = strokeRect;
+                window.__finishBystanderCalibration = () => {
+                    feed([...players,...bystanders],160);
+                    return {state:api.read().game.gameState, statuses:api.call('trackingStatuses'),
+                        baselines:api.read().game.players.slice(0,count).map(p=>p.baseline)};
+                };
+                return {before, beforeProgress, paused,labels,rectangles,width:canvas.width,
+                    statuses:api.call('trackingStatuses'), baselines:api.read().game.players.slice(0,count).map(p=>p.baseline)};
+            }, count);
+            assert.ok(result.beforeProgress > 0);
+            assert.equal(result.before.players.length,count);
+            assert.equal(result.paused.players[0].reason,'uncertain');
+            if (count === 2) {
+                assert.equal(result.paused.players[1].reason,null);
+                assert.equal(result.paused.players[1].phase,'ready');
+                assert.equal(result.rectangles[2].color,'#4ade80');
+            }
+            assert.deepEqual(result.statuses,Array(count).fill('unregistered'));
+            assert.deepEqual(result.baselines,Array(count).fill(0));
+            assert.ok(result.labels.some(label=>label.text === (count === 1 ? 'Paused' : 'Kua whakatā')));
+            assert.ok(result.labels.some(label=>label.text === (count === 1 ? 'Player 1' : 'Kaitākaro 1')));
+            assert.ok(result.labels.every(label=>label.scale === -1 && label.offset === result.width),'text counter-mirrors the image presentation');
+            assert.equal(result.rectangles.length,count*2,'each slot has a zone and selected torso outline');
+            assert.equal(result.rectangles[0].color,'#fbbf24');
+            if (process.env.CALIBRATION_PREVIEW_SCREENSHOT) {
+                await page.locator('#calibration-camera-status').evaluate(el=>{ el.hidden=true; });
+                await page.locator('#calibration-camera-preview').screenshot({
+                    path:`${process.env.CALIBRATION_PREVIEW_SCREENSHOT}-${count}.png`,animations:'disabled'
+                });
+            }
+            const complete = await page.evaluate(()=>window.__finishBystanderCalibration());
+            assert.equal(complete.state,'playing');
+            assert.deepEqual(complete.statuses,Array(count).fill('tracked'));
+            for (const baseline of complete.baselines) assert.ok(Math.abs(baseline-0.4)<1e-9);
+            assert.deepEqual(errors,[]);
+        } finally { await context.close(); }
+    }
+});

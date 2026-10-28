@@ -39,11 +39,13 @@ function createLocalization({ state, app }) {
             calibration: {
                 prepare: "Get ready…",
                 player: "Player {number}",
+                selection: { selected: "Selected", ready: "Ready", paused: "Paused" },
                 titles: { waiting: "Find your position", ready: "Good position!", sampling: "Calibrating..." },
                 hold: "Hold comfortably still, with your arms relaxed down.",
                 sample: "Stand comfortably — getting ready.",
                 reasons: {
-                    players: "Keep only the {count} intended player(s) in frame.",
+                    players: "Stand in the marked player zone(s). Keep shoulders and hips visible.",
+                    uncertain: "Player selection is unclear. Step apart and keep your player zone clear.",
                     visibility: "Show your shoulders and hips clearly.",
                     frame: "Adjust your position until your shoulders and hips fit in the image.",
                     closer: "Move a little closer to the camera.",
@@ -109,11 +111,13 @@ function createLocalization({ state, app }) {
             calibration: {
                 prepare: "Kia rite…",
                 player: "Kaitākaro {number}",
+                selection: { selected: "Kua tīpakohia", ready: "Kua rite", paused: "Kua whakatā" },
                 titles: { waiting: "Kimihia tō tūnga", ready: "Ka pai tō tūnga!", sampling: "E whakatika ana..." },
                 hold: "Tū mārie, me ō ringa ki raro.",
                 sample: "Tū pai — e whakarite ana.",
                 reasons: {
-                    players: "Kia {count} anake ngā kaitākaro i mua i te kāmera.",
+                    players: "Tū ki ngā wāhi kua tohua mō ngā kaitākaro. Whakaaturia ō pakihiwi me tō hope.",
+                    uncertain: "Kāore e mārama ko wai te kaitākaro. Tū wehe, kia wātea tō wāhi.",
                     visibility: "Whakaaturia ō pakihiwi me tō hope.",
                     frame: "Whakatikahia tō tūnga kia kitea ō pakihiwi me tō hope.",
                     closer: "Neke tata mai ki te kāmera.",

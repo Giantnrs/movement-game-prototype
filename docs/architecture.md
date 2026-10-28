@@ -28,7 +28,8 @@ or new browser dependency.
 | `src/input/camera.js` | Camera lifecycle, fresh worker-result routing, mirrored calibration/gameplay feeds | `initCameraSequence`, `predictWebcam`, `showCalibrationPreview`, `showCameraForMode` |
 | `src/input/pose.js` | Calibration, matched input routing, posture recognition, suspension | `beginCalibration`, `onPoseResults`, `checkPlayerTracking`, `handlePlayerMovement` |
 | `src/input/calibration.js` | Position readiness, stable timing, neutral-pose sample averaging | `resetCalibration`, `updateCalibration` |
-| `src/input/player-tracking.js` | Finalized slots, body/motion matching, loss and ambiguity policy | `resetEnrollment`, `lockPlayers`, `matchPlayers`, `trackingStatuses` |
+| `src/input/player-tracking.js` | Temporary calibration associations, finalized slots, body/motion matching, loss and ambiguity policy | `selectCalibrationPlayers`, `resetCalibrationSelection`, `resetEnrollment`, `lockPlayers`, `matchPlayers`, `trackingStatuses` |
+| `src/rendering/calibration-preview.js` | Mirrored calibration zones, selected torso outlines and localized status labels | `drawCalibrationOverlay` |
 | `src/input/hand-pointer.js` | Raised-hand selection, mirrored body-relative cursor mapping, smoothing and camera freshness | `observeHandPointer`, `checkHandPointer`, `resetHandPointer` |
 | `src/ui/hand-cursor.js` | Cursor/ring DOM, visible-button hit testing and two-second dwell clicks | `updateHandCursor`, `clearHandCursor` |
 | `src/ui/tracking-status.js` | Calibration guidance, recovery message and recalibration action presentation | `renderCalibration`, `refreshTrackingStatus`, `clearTrackingStatus` |
@@ -342,7 +343,7 @@ modes use the same position-first flow:
 `calibration.js` keeps per-player anchors, sample means and elapsed valid time
 private. Only shoulders and hips determine readiness; wrists can move or have
 low confidence without restarting preparation. Required torso landmarks must be
-finite, with any provided confidence scores at least 0.6, and fit within 2–98%
+finite, with any provided confidence scores at least 0.55, and fit within 2–98%
 of the image. Shoulder widths of 7–42% and vertical torso heights of 12–48% are
 accepted, with shoulders at least 12% from the top and hips no lower than 92%.
 Shoulder unevenness and natural leaning are allowed relative to torso size.
@@ -351,11 +352,32 @@ Single-player hip centers may occupy 20–80% of image width. Two-player centers
 may occupy 54–90% and 10–46%, with at least 18% separation (more for wide bodies).
 Candidates map to raw-image sides, so detector order does not change slots and a
 missing second player never shifts the remaining player into another slot.
-Multiple candidates on one side, extra people and overlapping bodies cannot
-finalize calibration. Mirroring preserves the existing board assignment.
+Calibration allows extra people when the intended players are unambiguous.
+`calibration.js` supplies the position zones; temporary associations remain
+private to `player-tracking.js`, separate from finalized gameplay slots. Initially
+each zone must contain one candidate. Once selected, position continuity and fixed
+torso/hip proportions retain that candidate through reordered detections and
+clearly separate bystanders, including distant candidates in the same zone.
+Competing matches or intersecting torso boxes pause only the affected slot;
+overlap checks also include people outside the zones. Neither detector order nor
+body size breaks an initial tie. A missing association expires after 300 ms;
+reselection issues a new token and restarts that slot's sample so it cannot inherit
+the previous person's baseline. Camera stalls, reversed time and explicit
+re-entry reset temporary associations together with readiness. All gameplay slots
+are still finalized together only by successful explicit calibration. Mirroring
+preserves the existing board assignment.
+
+`calibration-preview.js` draws dashed position zones and solid selected torso
+outlines over the existing full-frame preview. Player numbers and selected,
+ready or paused labels are localized and counter-mirrored so they remain readable.
+Amber indicates a paused slot, cyan sampling and green readiness. Highlights
+expire after 300 ms without a fresh observation; zones remain visible during
+preparation. These annotations change only calibration-camera pixels, already
+excluded from comparisons to `6778c34`; gameplay drawing and matching are unchanged.
+The existing four-candidate detector limit is retained.
 
 Torso movement is compared with each player's starting sample, correcting for
-camera aspect ratio. The tolerance is 20% of torso height, bounded to 4.5–7% of
+camera aspect ratio. The tolerance is 25% of torso height, bounded to 5.5–8.5% of
 image height. Normal hand movement and small natural sway do not affect it.
 A brief invalid observation pauses that player's sampling and prevents locking;
 it does not discard either player's progress. Invalid time never contributes to
@@ -368,9 +390,9 @@ suitable poses and the final confirmation are still required on every completion
 
 The progress bar averages individual sample progress. English/Māori guidance
 identifies which player needs to adjust when possible, and diagnostics include
-per-player phases, sample counts and progress. Only intended players should be
-present during calibration. The gameplay identity and loss policies below remain
-unchanged. Back/re-entry and recalibration reset all preparation.
+per-player phases, sample counts and progress. Bystanders should keep the marked
+player zones clear during initial selection. The gameplay identity and loss policies
+below remain unchanged. Back/re-entry and recalibration reset all preparation.
 
 Calibration copy timing is private to `ui/tracking-status.js`. Both title and
 instruction change together no more often than every 1500 ms of monotonic time;
@@ -389,10 +411,17 @@ changed guidance text values.
 
 `player-tracking.js` owns private slot records independently of detector result
 order and mutable game-player objects. It uses finite shoulder/hip landmarks
-with any provided visibility/presence scores at least 0.6. Camera aspect ratio
+with any provided visibility/presence scores at least 0.55. Camera aspect ratio
 is included in geometry. Body profiles contain shoulder width, hip width, torso length,
 and hip/shoulder proportions, derived from averaged neutral landmarks and fixed
-afterward. `matchPlayers()` cannot enroll people; only the successful calibration
+afterward. The requested modest tolerance increase lowers torso confidence from
+0.6 to 0.55 for calibration, final enrollment and continued matching, avoiding a
+stricter confidence gate immediately after calibration. Arm-gesture confidence
+remains 0.6. Calibration sway tolerance increases from 20% to 25% of torso height;
+the 300 ms loss limit, 750 ms sample, fresh final confirmation, position zones,
+ambiguity/overlap rules and identity gates retain their existing values. This
+accepts noisier returned poses; it cannot restore a pose omitted by inference.
+`matchPlayers()` cannot enroll people; only the successful calibration
 coordinator calls `lockPlayers()`.
 Candidate matching primarily follows the last trusted hip position and bounded
 velocity prediction. A candidate must fall within the predicted position window
@@ -741,8 +770,14 @@ remain compared normally. Physical webcam validation remains a separate check.
 Readiness tests cover delayed finalization, unsuitable positions and useful
 guidance, walking, relaxed posture and small jitter, interrupted samples, automatic
 candidate replacement before locking, dropped frames, both player modes, reordered
-detections, and consistent timing at 15/30/60 camera frames per second. Browser
-tests drive the real calibration entry and pose pipeline, asserting localized
+detections, and consistent timing at 15/30/60 camera frames per second. Added
+bystander tests cover both modes at those rates, initial ambiguity, same-zone
+continuity, cross-zone overlaps, independent progress, sample replacement and
+stale highlights. Browser tests verify bystander enrollment, independent overlap
+suspension, localized labels, counter-mirroring, zones and torso outlines, and
+final locks. Existing calibration-copy and preview exclusions remain scoped to
+the requested calibration changes; no baseline revision or gameplay exclusion
+changes. Browser tests drive the real calibration entry and pose pipeline, asserting localized
 phase guidance, paused/independent progress, and no finalized slots/baselines until completion.
 
 For a future feature, identify its owner in the table, change that subsystem,

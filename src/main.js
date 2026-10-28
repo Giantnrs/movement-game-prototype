@@ -26,6 +26,7 @@ app.playerTracking = createPlayerTracking(context);
 app.handCursor = createHandCursor(context);
 app.handPointer = createHandPointer(context);
 app.calibration = createCalibration(context);
+app.calibrationPreview = createCalibrationPreview(context);
 app.trackingStatus = createTrackingStatus(context);
 app.pose = createPose(context);
 app.controls = createControls(context);

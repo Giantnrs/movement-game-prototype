@@ -3,10 +3,20 @@ function createCalibration({ state, app }) {
     const SAMPLE_MS = 750;
     const GRACE_MS = 300;
     const MIN_SAMPLES = 5;
-    const MIN_CONFIDENCE = 0.6;
+    const MIN_CONFIDENCE = 0.55;
     const EPSILON = 1e-6;
     const LANDMARKS = [11, 12, 23, 24];
     let slots, lastAt, confirmSince, confirmSamples;
+    let selectionView = [], viewAt;
+
+    function calibrationZones() {
+        return state.session.numPlayers === 1 ? [[0.2, 0.8]] : [[0.54, 0.9], [0.1, 0.46]];
+    }
+
+    function calibrationView() {
+        return { zones: calibrationZones(), players: viewAt !== undefined && performance.now() - viewAt <= GRACE_MS
+            ? selectionView : [] };
+    }
 
     function emptySlot() {
         return { anchor: null, means: [], samples: 0, elapsed: 0, lastGoodAt: undefined, lastSampleAt: undefined, ready: false };
@@ -17,6 +27,9 @@ function createCalibration({ state, app }) {
         lastAt = undefined;
         confirmSince = undefined;
         confirmSamples = 0;
+        selectionView = [];
+        viewAt = undefined;
+        app.playerTracking.resetCalibrationSelection();
     }
     resetCalibration();
 
@@ -47,7 +60,7 @@ function createCalibration({ state, app }) {
         // Learn a comfortable upright torso; hands do not determine readiness.
         if (Math.abs(left.y - right.y) > Math.max(0.08, height * 0.35) ||
             Math.abs(shoulderX - hipX) > Math.max(0.08, width * 0.75)) return 'neutral';
-        const zone = state.session.numPlayers === 1 ? [0.2, 0.8] : index === 0 ? [0.54, 0.9] : [0.1, 0.46];
+        const zone = calibrationZones()[index];
         if (hipX < zone[0] - EPSILON || hipX > zone[1] + EPSILON) return state.session.numPlayers === 1 ? 'center' : 'sides';
         return null;
     }
@@ -56,7 +69,7 @@ function createCalibration({ state, app }) {
         const video = app.camera.videoElement;
         const aspect = (video.videoWidth || 640) / (video.videoHeight || 480);
         const torso = (slot.anchor[2].y + slot.anchor[3].y - slot.anchor[0].y - slot.anchor[1].y) / 2;
-        const tolerance = Math.max(0.045, Math.min(0.07, torso * 0.2));
+        const tolerance = Math.max(0.055, Math.min(0.085, torso * 0.25));
         return LANDMARKS.every((id, point) => Math.hypot((pose[id].x - slot.anchor[point].x) * aspect,
             pose[id].y - slot.anchor[point].y) <= tolerance + EPSILON);
     }
@@ -102,12 +115,13 @@ function createCalibration({ state, app }) {
         lastAt = now;
         const count = state.session.numPlayers;
         const candidates = Array.from({ length: count }, () => []);
-        const extra = poses.length > count;
         for (const pose of poses) {
             if (count === 1) candidates[0].push(pose);
             else if ([23, 24].every(id => isVisible(pose?.[id]))) candidates[center(pose) > 0.5 ? 0 : 1].push(pose);
         }
-        const ordered = candidates.map(bucket => bucket.length === 1 ? bucket[0] : null);
+        const selection = app.playerTracking.selectCalibrationPlayers(poses, calibrationZones());
+        const ordered = selection.map((item, index) => item.index !== undefined ? poses[item.index]
+            : !item.reason && candidates[index].length === 1 ? candidates[index][0] : null);
         let tooClose = false;
         if (count === 2 && ordered.every(pose => pose && LANDMARKS.every(id => isVisible(pose[id])))) {
             const width = pose => Math.abs(pose[11].x - pose[12].x);
@@ -115,14 +129,21 @@ function createCalibration({ state, app }) {
             tooClose = center(ordered[0]) - center(ordered[1]) + EPSILON < separation;
         }
         const players = ordered.map((pose, index) => {
-            let reason = extra ? 'players' : tooClose || candidates[index].length > 1 ? 'sides'
-                : !pose ? poses.length < count ? 'players' : 'visibility' : positionProblem(pose, index);
+            if (selection[index].token !== undefined && selection[index].token !== slots[index].token) {
+                slots[index] = { ...emptySlot(), token: selection[index].token };
+            }
+            let reason = tooClose ? 'sides' : selection[index].reason
+                || (candidates[index].length > 1 && !pose ? 'uncertain' : null)
+                || (!pose ? poses.length < count ? 'players' : 'visibility' : positionProblem(pose, index));
             if (reason) pauseSlot(index, now);
             else reason = sampleSlot(pose, index, now);
             const slot = slots[index];
             return { phase: reason ? 'waiting' : slot.ready ? 'ready' : 'sampling', reason,
                 progress: Math.min(slot.elapsed / SAMPLE_MS, 1), samples: slot.samples };
         });
+        selectionView = selection.map((item, index) => ({ bounds: item.bounds, index: item.index,
+            phase: players[index].phase, reason: players[index].reason }));
+        viewAt = now;
         const progress = players.reduce((sum, player) => sum + player.progress, 0) / count;
         const blocked = players.findIndex(player => player.reason);
         if (blocked !== -1 || !slots.every(slot => slot.ready)) {
@@ -144,5 +165,5 @@ function createCalibration({ state, app }) {
             samples: Math.min(...slots.map(slot => slot.samples)), sampleCounts: slots.map(slot => slot.samples) };
     }
 
-    return { resetCalibration, updateCalibration };
+    return { resetCalibration, updateCalibration, calibrationZones, calibrationView };
 }

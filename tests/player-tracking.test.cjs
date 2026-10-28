@@ -87,7 +87,7 @@ test('after enrollment the hand pointer keeps Player 1 through reordered detecti
     assert.equal(f.tracker.trackingReport().tracks.length,2,'missing Player 1 is never replaced');
 });
 
-test('only explicit calibration can enroll players, with exactly the intended people visible', () => {
+test('only explicit calibration can enroll players, supplying exactly the selected player poses', () => {
     const { tracker, step } = fixture();
     const player = pose(0.7), bystander = pose(0.2);
     assert.equal(step([player])[0], null);
@@ -622,3 +622,153 @@ for (const recording of require('./fixtures/tracking-recovery.json')) {
         assert.equal(JSON.stringify(tracker.trackingReport().tracks[0].profile),profile);
     });
 }
+
+test('calibration ignores separate bystanders in both modes at 15, 30 and 60 camera fps', () => {
+    for (const count of [1, 2]) for (const fps of [15, 30, 60]) {
+        const f = fixture(count, fps);
+        f.state.game.gameState = 'calibrating';
+        const players = count === 1 ? [pose(0.5)] : [pose(0.75), pose(0.25)];
+        const extras = count === 1 ? [pose(0.04, { size:0.3 }), pose(0.96, { size:0.3 })]
+            : [pose(0.02, { size:0.3 }), pose(0.98, { size:0.3 })];
+        for (let i = 0; i < fps * 1.2; i++) {
+            const people = [...players, ...extras];
+            f.feed(i % 2 ? people.reverse() : people);
+        }
+        assert.equal(f.state.game.gameState, 'playing', `${count} players at ${fps} fps`);
+        for (let i = 0; i < count; i++) {
+            assert.ok(Math.abs(f.state.game.players[i].baseline - 0.4) < 1e-9);
+            assert.ok(Math.abs(f.state.game.players[i].homeX - (count === 1 ? 0.5 : i === 0 ? 0.75 : 0.25)) < 1e-9);
+        }
+    }
+});
+
+test('calibration does not choose the first or largest of competing initial candidates', () => {
+    const f = fixture();
+    f.state.game.gameState = 'calibrating';
+    const a = pose(0.3, { size:0.6 }), b = pose(0.7);
+    for (let i = 0; i < 100; i++) f.feed(i % 2 ? [a,b] : [b,a]);
+    assert.equal(f.view().reason, 'uncertain');
+    assert.equal(f.view().progress, 0);
+    assert.equal(f.tracker.trackingStatuses()[0], 'unregistered');
+    f.feed([b], 60);
+    assert.equal(f.state.game.gameState, 'playing');
+});
+
+test('a selected calibration candidate survives reordered detections and a distant same-zone bystander', () => {
+    const f = fixture();
+    f.state.game.gameState = 'calibrating';
+    const player = pose(0.3, { size:0.7 }), bystander = pose(0.75, { size:0.6 });
+    f.feed([player], 20);
+    const before = f.view().progress;
+    f.feed([bystander, player], 10);
+    assert.ok(f.view().progress > before);
+    assert.equal(f.app.calibration.calibrationView().players[0].index, 1);
+    f.feed([player, bystander], 30);
+    assert.equal(f.state.game.gameState, 'playing');
+    assert.ok(Math.abs(f.state.game.players[0].homeX - 0.3) < 1e-9);
+});
+
+test('overlap pauses only the affected calibration sample, even across a zone boundary', () => {
+    const f = fixture(2);
+    f.state.game.gameState = 'calibrating';
+    const first = pose(0.82), second = pose(0.25), extra = pose(0.93, { size:0.6 });
+    f.feed([first, second], 25);
+    const before = f.view().players[0].progress;
+    f.feed([extra, second, first], 5);
+    assert.equal(f.view().players[0].reason, 'uncertain');
+    assert.equal(f.view().players[0].progress, before);
+    assert.ok(f.view().players[1].progress > before);
+    f.feed([extra, first, second], 20);
+    assert.equal(f.view().players[0].progress, 0);
+    assert.equal(f.view().players[1].phase, 'ready');
+    assert.equal(f.state.game.gameState, 'calibrating');
+    f.feed([second, first], 60);
+    assert.equal(f.state.game.gameState, 'playing');
+});
+
+test('a replacement candidate restarts sampling and cannot inherit another torso baseline', () => {
+    const f = fixture();
+    f.state.game.gameState = 'calibrating';
+    const first = pose(0.3, { size:0.6 });
+    const second = pose(0.7).map(point => ({ ...point, y:point.y - 0.03 }));
+    f.feed([first], 35);
+    f.feed([second], 10);
+    assert.equal(f.view().players[0].reason, 'steady');
+    assert.equal(f.state.game.gameState, 'calibrating');
+    f.feed([second], 15);
+    assert.ok(f.view().progress < 0.3, 'replacement starts a new full sample after grace');
+    f.feed([second], 50);
+    assert.equal(f.state.game.gameState, 'playing');
+    assert.ok(Math.abs(f.state.game.players[0].baseline - 0.37) < 1e-9);
+    assert.ok(Math.abs(f.state.game.players[0].homeX - 0.7) < 1e-9);
+});
+
+test('calibration highlights expire on stale camera observations and reset on re-entry', () => {
+    const f = fixture();
+    f.state.game.gameState = 'calibrating';
+    f.feed([pose()], 20);
+    assert.ok(f.app.calibration.calibrationView().players[0].bounds);
+    f.advance(301);
+    assert.equal(f.app.calibration.calibrationView().players.length, 0);
+    f.feed([pose()]);
+    assert.equal(f.view().progress, 0);
+    f.feed([pose()]);
+    f.app.pose.beginCalibration();
+    assert.equal(f.app.calibration.calibrationView().players.length, 0);
+    assert.equal(f.tracker.trackingStatuses()[0], 'unregistered');
+});
+
+test('modest torso confidence and sway with offscreen hands calibrate at 15, 30 and 60 fps in both modes', () => {
+    for (const count of [1,2]) for (const fps of [15,30,60]) {
+        const f = fixture(count,fps);
+        f.state.game.gameState = 'calibrating';
+        let people;
+        for (let frame = 0; frame < Math.ceil(fps * 1.2); frame++) {
+            people = (count === 1 ? [0.5] : [0.75,0.25]).map(x => {
+                const p = pose(x + (frame % 2 ? 0.05 : 0));
+                for (const id of [11,12,23,24]) p[id].visibility = p[id].presence = 0.55;
+                p[15] = { x:-0.2,y:1.2,visibility:0.1,presence:0.1 };
+                p[16] = { x:1.2,y:1.2,visibility:0.1,presence:0.1 };
+                return p;
+            });
+            f.feed(people);
+        }
+        assert.equal(f.state.game.gameState,'playing',`${count} players at ${fps} fps`);
+        assert.deepEqual(Array.from(f.tracker.trackingStatuses()),Array(count).fill('tracked'));
+        const matched = f.step(people);
+        for (let i = 0; i < count; i++) {
+            assert.equal(matched[i],people[i],'enrollment and gameplay accept the same torso confidence');
+            assert.ok(Math.abs(f.state.game.players[i].baseline - 0.4) < 1e-9);
+        }
+    }
+});
+
+test('torso confidence below the relaxed threshold still blocks calibration, enrollment and matching', () => {
+    for (const id of [11,12,23,24]) for (const key of ['visibility','presence']) {
+        const f = fixture();
+        f.state.game.gameState = 'calibrating';
+        const bad = pose(); bad[id][key] = 0.549;
+        f.feed([bad],70);
+        assert.equal(f.state.game.gameState,'calibrating');
+        assert.equal(f.view().progress,0);
+        assert.equal(f.tracker.lockPlayers([bad]),false);
+        assert.equal(f.tracker.lockPlayers([pose()]),true);
+        assert.equal(f.step([bad])[0],null);
+    }
+});
+
+test('movement beyond the relaxed sway limit pauses calibration and prolonged movement clears its sample', () => {
+    const f = fixture();
+    f.state.game.gameState = 'calibrating';
+    f.feed([pose()],20);
+    const before = f.view().progress;
+    f.feed([pose(0.57)],5);
+    assert.equal(f.view().reason,'steady');
+    assert.equal(f.view().progress,before);
+    f.feed([pose(0.57)],14);
+    assert.equal(f.view().progress,0);
+    assert.equal(f.state.game.gameState,'calibrating');
+    assert.equal(f.tracker.trackingStatuses()[0],'unregistered');
+    f.feed([pose(0.57)],5);
+    assert.ok(f.view().progress > 0 && f.view().progress < before,'a settled new position starts a fresh sample');
+});

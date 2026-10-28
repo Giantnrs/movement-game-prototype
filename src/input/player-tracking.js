@@ -1,18 +1,86 @@
 /** Calibration-owned player slots. Unmatched poses never enroll during play. */
 function createPlayerTracking({ state, app }) {
-    const MIN_CONFIDENCE = 0.6;
+    const MIN_CONFIDENCE = 0.55;
     const STALE_MS = 500;
     const REACQUIRE_MS = 300;
     const LONG_LOSS_MS = 2000;
     const EXTENDED_REACQUIRE_MS = 1000;
     const AMBIGUITY_MARGIN = 0.35;
     let tracks = [];
+    let calibrationTracks = [], calibrationToken = 0;
     let frameId = 0;
     let report = { frameId: 0, rawCount: 0, validCount: 0, selected: [], accepted: [], ignored: [], costs: [], candidates: [] };
 
     function resetEnrollment() {
         tracks = [];
+        resetCalibrationSelection();
         report = { frameId: ++frameId, rawCount: 0, validCount: 0, selected: [], accepted: [], ignored: [], costs: [], candidates: [] };
+    }
+
+    function resetCalibrationSelection() { calibrationTracks = []; }
+
+    // Temporary associations only: these never enroll gameplay slots. A new
+    // association gets a new token so readiness cannot mix two people's samples.
+    function selectCalibrationPlayers(poses, zones) {
+        const now = performance.now();
+        const candidates = poses.map(describe);
+        const hipX = pose => [23, 24].every(id => Number.isFinite(pose?.[id]?.x) &&
+            Number.isFinite(pose[id].y)) ? (pose[23].x + pose[24].x) / 2 : null;
+        const bounds = pose => {
+            const points = [11, 12, 23, 24].map(id => pose?.[id]);
+            if (!points.every(p => Number.isFinite(p?.x) && Number.isFinite(p?.y))) return null;
+            return { x: Math.min(...points.map(p => p.x)), y: Math.min(...points.map(p => p.y)),
+                right: Math.max(...points.map(p => p.x)), bottom: Math.max(...points.map(p => p.y)) };
+        };
+        const boxes = poses.map(bounds);
+        const overlaps = (a, b) => a && b && Math.min(a.right, b.right) - Math.max(a.x, b.x) > 0.02 &&
+            Math.min(a.bottom, b.bottom) - Math.max(a.y, b.y) > 0.04;
+        return zones.map((zone, slot) => {
+            let track = calibrationTracks[slot];
+            if (track && (now < track.lastSeen || now - track.lastSeen > 300)) {
+                calibrationTracks[slot] = track = null;
+            }
+            const eligible = poses.map((pose, index) => ({ index, x: hipX(pose) }))
+                .filter(item => item.x !== null && item.x >= zone[0] - 1e-6 && item.x <= zone[1] + 1e-6);
+            let selected;
+            if (track) {
+                const ranked = eligible.map(({ index }) => {
+                    const candidate = candidates[index];
+                    if (!candidate) return { index, cost: Infinity };
+                    const distance = Math.hypot((candidate.center.x - track.center.x) / 0.12,
+                        (candidate.center.y - track.center.y) / 0.12);
+                    const torso = Math.abs(Math.log(candidate.torso / track.profile.torso));
+                    const hip = Math.abs(Math.log(candidate.hipWidth / track.profile.hipWidth));
+                    return { index, cost: distance <= 1 && torso <= 0.22 && hip <= 0.35
+                        ? distance + torso * 0.15 + hip * 0.15 : Infinity };
+                }).filter(item => Number.isFinite(item.cost)).sort((a, b) => a.cost - b.cost);
+                if (ranked.length > 1 && ranked[1].cost - ranked[0].cost < AMBIGUITY_MARGIN) {
+                    return { reason: 'uncertain', token: track.token };
+                }
+                selected = ranked[0]?.index;
+                // Keep invalid torso frames available for readiness guidance,
+                // but never substitute a different valid person during grace.
+                if (selected === undefined && eligible.length === 1 && !candidates[eligible[0].index]) selected = eligible[0].index;
+                if (selected === undefined) return { reason: 'steady', token: track.token };
+            } else {
+                if (eligible.length > 1) return { reason: 'uncertain' };
+                selected = eligible[0]?.index;
+            }
+            if (selected === undefined) return {};
+            const box = boxes[selected];
+            if (boxes.some((other, index) => index !== selected && overlaps(box, other))) {
+                return { index: selected, bounds: box, reason: 'uncertain', token: track?.token };
+            }
+            if (candidates[selected]) {
+                if (!track) {
+                    track = { ...createTrack(candidates[selected], now), token: ++calibrationToken };
+                    calibrationTracks[slot] = track;
+                }
+                track.center = candidates[selected].center;
+                track.lastSeen = now;
+            }
+            return { index: selected, bounds: box, token: track?.token };
+        });
     }
 
     function describe(landmarks, index) {
@@ -210,5 +278,6 @@ function createPlayerTracking({ state, app }) {
         return candidates[0].landmarks;
     }
 
-    return { resetEnrollment, lockPlayers, matchPlayers, trackingStatuses, trackingReport, getHandPointerPose };
+    return { resetEnrollment, lockPlayers, matchPlayers, trackingStatuses, trackingReport, getHandPointerPose,
+        resetCalibrationSelection, selectCalibrationPlayers };
 }

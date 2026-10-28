@@ -132,6 +132,7 @@ function createCamera({ state, app }) {
             if (camCalibration.width !== vw) camCalibration.width = vw;
             if (camCalibration.height !== vh) camCalibration.height = vh;
             ctxCalibration.drawImage(videoElement, 0, 0, vw, vh);
+            app.calibrationPreview?.drawCalibrationOverlay(ctxCalibration, vw, vh);
             refreshCalibrationCameraStatus();
         }
 
