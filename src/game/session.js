@@ -1,7 +1,6 @@
 /** session: see docs/architecture.md for ownership and compatibility rules. */
 function createSession({ state, app }) {
     function startGameplay() {
-        app.camera.invalidatePoseFrame();
         app.handPointer.resetHandPointer();
         app.finishPhoto.resetFinishPhoto();
         app.trackingSafety.resetTrackingSafety();
@@ -78,7 +77,6 @@ function createSession({ state, app }) {
         app.camera.showCameraForMode();
         app.audio.bgMusic.currentTime = 0; app.audio.bgMusic.play().catch(e => console.log(e));
         if(state.game.gameLoopId) cancelAnimationFrame(state.game.gameLoopId);
-        app.simulation.resetFrameClock();
         app.simulation.gameLoop();
     }
 

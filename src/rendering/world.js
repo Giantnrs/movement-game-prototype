@@ -14,38 +14,6 @@ function createWorld({ state, app }) {
         return { x: centerX + (laneIdx * laneW), y: currentY, w: laneW * 0.8 };
     }
 
-    function prepareParticles(canvasW, isDark) {
-        // Shooting stars — rate and colour change with style
-        const spawnRate = state.game.skyStyle >= 3 ? 0.04 : state.game.skyStyle >= 1 ? 0.025 : 0.015;
-        if (Math.random() < spawnRate) {
-            const hue = state.game.skyStyle >= 2 ? Math.floor(Math.random() * 360) : null;
-            state.game.skyParticles.push({
-                x:    Math.random() * canvasW * 0.65,
-                y:    Math.random() * horizonY * 0.5,
-                vx:   9 + Math.random() * 8,
-                vy:   2 + Math.random() * 3,
-                life: 1.0,
-                len:  90 + Math.random() * 80,   // longer tail (was 55–120)
-                lw:   state.game.skyStyle >= 3 ? 4 : 3,
-                color: hue !== null
-                    ? `hsla(${hue},100%,${isDark ? 90 : 97}%,`
-                    : (isDark ? 'rgba(220,235,255,' : 'rgba(255,255,255,')
-            });
-        }
-
-        state.game.skyParticles = state.game.skyParticles.filter(p => p.life > 0);
-    }
-
-    function advanceBackground(canvasW) {
-        if (!state.game.skyEffectsEnabled) return;
-        state.game.skyStarBase.forEach(s => { s.twinkle += 0.055; });
-        prepareParticles(canvasW, document.documentElement.classList.contains('dark'));
-        state.game.skyParticles.forEach(p => {
-            p.x += p.vx; p.y += p.vy;
-            p.life -= 0.016;
-        });
-    }
-
     function drawBackground(canvasW) {
         const isDark = document.documentElement.classList.contains('dark');
         ctx.fillStyle = isDark ? '#0f172a' : '#bae6fd'; ctx.fillRect(0, 0, canvasW, horizonY);
@@ -98,7 +66,25 @@ function createWorld({ state, app }) {
                 ctx.fill();
             });
 
-            prepareParticles(canvasW, isDark);
+            // Shooting stars — rate and colour change with style
+            const spawnRate = state.game.skyStyle >= 3 ? 0.04 : state.game.skyStyle >= 1 ? 0.025 : 0.015;
+            if (Math.random() < spawnRate) {
+                const hue = state.game.skyStyle >= 2 ? Math.floor(Math.random() * 360) : null;
+                state.game.skyParticles.push({
+                    x:    Math.random() * canvasW * 0.65,
+                    y:    Math.random() * horizonY * 0.5,
+                    vx:   9 + Math.random() * 8,
+                    vy:   2 + Math.random() * 3,
+                    life: 1.0,
+                    len:  90 + Math.random() * 80,   // longer tail (was 55–120)
+                    lw:   state.game.skyStyle >= 3 ? 4 : 3,
+                    color: hue !== null
+                        ? `hsla(${hue},100%,${isDark ? 90 : 97}%,`
+                        : (isDark ? 'rgba(220,235,255,' : 'rgba(255,255,255,')
+                });
+            }
+
+            state.game.skyParticles = state.game.skyParticles.filter(p => p.life > 0);
             state.game.skyParticles.forEach(p => {
                 ctx.save();
                 ctx.globalAlpha = p.life;
@@ -153,5 +139,5 @@ function createWorld({ state, app }) {
         // bg-canvas provides the animated background during non-game states
     }
 
-    return { horizonY, getScreenPos, drawBackground, advanceBackground, drawStaticBackground };
+    return { horizonY, getScreenPos, drawBackground, drawStaticBackground };
 }

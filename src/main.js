@@ -17,7 +17,6 @@ app.leaderboards = createLeaderboards(context);
 app.notifications = createNotifications(context);
 app.viewport = createViewport(context);
 app.audio = createAudio(context);
-app.poseInference = createPoseInference(context);
 app.camera = createCamera(context);
 app.finishPhoto = createFinishPhoto(context);
 app.armPostures = createArmPostures(context);

@@ -1,14 +1,5 @@
 /** simulation: see docs/architecture.md for ownership and compatibility rules. */
 function createSimulation({ state, app }) {
-    const STEP_MS = 1000 / 60;
-    const MAX_GAP_MS = 250;
-    let lastFrameAt, remainder = 0;
-
-    function resetFrameClock() {
-        lastFrameAt = undefined;
-        remainder = 0;
-    }
-    document.addEventListener('visibilitychange', resetFrameClock);
     function spawnObstacle() {
         let availableTypes = ['high', 'low', 'block'];
         if (state.game.score > 100) availableTypes.push('low-wide');
@@ -205,40 +196,16 @@ function createSimulation({ state, app }) {
         return true;
     }
 
-    function gameLoop(timestamp) {
-        if (state.game.gameState !== 'playing') { resetFrameClock(); return; }
+    function gameLoop() {
+        if (state.game.gameState !== 'playing') return;
         app.pose.checkPlayerTracking();
         app.energy.updateEnergy();
-        if (app.trackingSafety.isGameplayPaused() || document.hidden) {
-            resetFrameClock();
-        } else {
-            // The immediate session-start call retains its original first step.
-            // After a pause the first callback starts a new clock, with no debt.
-            let steps = 1;
-            if (Number.isFinite(timestamp)) {
-                if (lastFrameAt !== undefined) {
-                    const elapsed = timestamp - lastFrameAt;
-                    if (elapsed < 0 || elapsed > MAX_GAP_MS) {
-                        remainder = 0;
-                        steps = 0;
-                    } else {
-                        remainder += elapsed;
-                        steps = Math.floor((remainder + 1e-7) / STEP_MS);
-                        remainder = Math.max(0, remainder - steps * STEP_MS);
-                    }
-                }
-                lastFrameAt = timestamp;
-            }
-            for (let step = 0; step < steps; step++) {
-                if (!advanceFrame()) { resetFrameClock(); return; }
-                // Keep random/animation updates between simulation steps in
-                // their original viewport order. Only the last step paints.
-                if (step === steps - 1) app.scene.renderGameplay();
-                else app.scene.advanceVisualFrame();
-            }
+        if (!app.trackingSafety.isGameplayPaused()) {
+            if (!advanceFrame()) return;
+            app.scene.renderGameplay();
         }
         state.game.gameLoopId = requestAnimationFrame(gameLoop);
     }
 
-    return { spawnObstacle, advanceFrame, gameLoop, resetFrameClock };
+    return { spawnObstacle, advanceFrame, gameLoop };
 }

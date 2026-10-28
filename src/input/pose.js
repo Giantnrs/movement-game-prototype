@@ -5,7 +5,6 @@ function createPose({ state, app }) {
     const laneGateReasons = new WeakMap();
 
     function beginCalibration() {
-        app.camera.invalidatePoseFrame?.();
         app.finishPhoto.resetFinishPhoto();
         app.trackingSafety.resetTrackingSafety();
         app.debug.record('calibration.begin', { expected: state.session.numPlayers });

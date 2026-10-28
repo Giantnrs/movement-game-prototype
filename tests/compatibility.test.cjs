@@ -132,7 +132,7 @@ async function prepare(legacy, options = {}) {
             constructor(...args) { super(...(args.length ? args : [currentDate])); }
             static now() { return new RealDate(currentDate).getTime(); }
         };
-        let next = 1, frameTime = 0;
+        let next = 1;
         const frames = new Map(), timers = new Map();
         const nativeFrame = window.requestAnimationFrame.bind(window);
         window.__settleResize = () => new Promise(resolve => nativeFrame(() => nativeFrame(resolve)));
@@ -141,7 +141,7 @@ async function prepare(legacy, options = {}) {
         window.setTimeout = (callback, delay) => { const id = next++; timers.set(id, { callback, delay }); return id; };
         window.clearTimeout = id => timers.delete(id);
         window.__advanceFrames = count => {
-            for (let n = 0; n < count; n++) { const pending = [...frames.values()]; frames.clear(); pending.forEach(callback => callback(frameTime)); frameTime += 1000 / 60; }
+            for (let n = 0; n < count; n++) { const pending = [...frames.values()]; frames.clear(); pending.forEach(callback => callback(n * 1000 / 60)); }
         };
         window.__pendingFrameCount = () => frames.size;
         window.__flushTimers = () => { const pending = [...timers.values()].sort((a, b) => a.delay - b.delay); timers.clear(); pending.forEach(timer => timer.callback()); };
@@ -173,22 +173,6 @@ async function prepare(legacy, options = {}) {
             }
             createGain() { return { gain: { value: 0, setValueAtTime() {}, linearRampToValueAtTime() {} }, disconnect() {} }; }
         };
-        // Execute the production worker protocol asynchronously with the existing
-        // deterministic vision double. Real-worker responsiveness has its own test.
-        const blobs = new Map();
-        const makeUrl = URL.createObjectURL.bind(URL), revokeUrl = URL.revokeObjectURL.bind(URL);
-        URL.createObjectURL = blob => { const url = makeUrl(blob); blobs.set(url, blob); return url; };
-        URL.revokeObjectURL = url => { blobs.delete(url); revokeUrl(url); };
-        window.Worker = class {
-            constructor(url) {
-                this.scope = { postMessage: data => queueMicrotask(() => { if (!this.stopped) this.onmessage?.({ data }); }) };
-                this.start = blobs.get(url).text().then(source => new Function('self', source)(this.scope));
-            }
-            postMessage(data) { this.start.then(() => { if (!this.stopped) this.scope.onmessage({ data }); }); }
-            terminate() { this.stopped = true; }
-        };
-        const nativeBitmap = window.createImageBitmap.bind(window);
-        window.createImageBitmap = source => window.__realCameraPlayback ? nativeBitmap(source) : Promise.resolve({ close() {} });
         window.__visionFailure = false;
         window.__cameraFailure = false;
         window.__loadVision = async () => {
@@ -304,7 +288,7 @@ async function snapshot(page) {
     // The player-lock feature deliberately expands candidate detection to four.
     // A dedicated test checks the new value; retain every other camera option.
     for (const effect of result.effects) {
-        if (effect[0] === 'vision-options') { delete effect[1].numPoses; delete effect[1].canvas; }
+        if (effect[0] === 'vision-options') delete effect[1].numPoses;
     }
     return canonicalizeMedia(result);
 }
@@ -1885,10 +1869,6 @@ test('calibration displays a live full-frame mirrored video in both modes, inclu
                 const pixel = canvas.getContext('2d').getImageData(canvas.width / 4,canvas.height / 2,1,1).data;
                 return pixel[0] > 180 && pixel[2] > 180 && pixel[1] < 50;
             }, null, { polling:50, timeout:5000 });
-            await page.waitForFunction(() => {
-                window.__advanceFrames(1);
-                return document.getElementById('calibration-camera-status').textContent.includes('body tracking is unavailable');
-            });
             const trackingFailure = await page.locator('#calibration-camera-status').textContent();
             assert.match(trackingFailure, /Camera is live, but body tracking is unavailable/);
             await page.evaluate(() => {
@@ -1896,9 +1876,8 @@ test('calibration displays a live full-frame mirrored video in both modes, inclu
                 window.__paintCameraFrame('lime');
                 window.__cameraTestStream.getVideoTracks()[0].requestFrame();
             });
-            await page.waitForFunction(async () => {
+            await page.waitForFunction(() => {
                 window.__advanceFrames(1);
-                await window.__gameTest.call('predictWebcam');
                 const canvas = document.getElementById('cam-calibration');
                 return canvas.getContext('2d').getImageData(canvas.width / 4,canvas.height / 2,1,1).data[1] > 180 &&
                     document.getElementById('calibration-camera-status').hidden;
