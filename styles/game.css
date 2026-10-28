@@ -222,6 +222,34 @@
             100% { transform: translate(-50%,-50%) rotate(-14deg) scale(1);    opacity: 1; }
         }
 
+        /* Restart gesture target */
+        #btn-play-again {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 144px;
+            min-height: 64px;
+            padding: 8px 12px;
+            font-size: 20px;
+            line-height: 1.25;
+        }
+        #btn-play-again > [aria-hidden] { font-size: 36px; }
+        @media (max-width: 600px) {
+            #btn-play-again {
+                flex-direction: column;
+                gap: 0;
+                min-width: 80px;
+                padding: 4px;
+                font-size: 14px;
+            }
+            #btn-play-again > [aria-hidden] { font-size: 28px; }
+        }
+        /* End restart gesture target */
+
         /* 2P mode game over: hide energy, larger names, smaller grey labels */
         #game-over-screen.mode-2p #final-p1-energy-col,
         #game-over-screen.mode-2p #final-p2-energy-col { display: none !important; }

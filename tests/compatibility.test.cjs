@@ -48,6 +48,8 @@ const changedWidgets = new Set([...changedHudIds, 'hand-cursor', 'hand-cursor-pr
     'game-over-layout', 'finish-photo-single', 'finish-photo-single-canvas', 'finish-photo-dialog', 'finish-photo-title', 'finish-photo-close', 'finish-photo-dual-canvas',
     'debug-finish', 'debug-mark', 'debug-note', 'debug-download', 'leaderboard-body', 'gameover-leaderboard-body', 'streak-big-msg',
     'player-tracking-notice', 'player-tracking-message', 'btn-recalibrate-players',
+    // Requested larger, labeled restart target; verified separately below.
+    'btn-play-again', 'txt-play-again',
     'calibration-camera-preview', 'cam-calibration', 'calibration-camera-status',
     // Gameplay label positions now follow HUD geometry rather than fixed offsets.
     // Dedicated tests assert their content/lifetime and placement below the HUD.
@@ -322,6 +324,7 @@ test('existing page markup, utility classes, and CSS are preserved around reloca
         .replace(/        <!-- 1 PLAYER HUD -->[\s\S]*?(?=        <!-- Login \()/g, '')
         .replaceAll(' data-energy-estimate', '')
         .replaceAll('>EST. ENERGY<', '>ENERGY<')
+        .replace(/<button id="btn-play-again"[\s\S]*?<\/button>/g, '<!-- restart target -->')
         .replace(/            <!-- Finish photo layout start -->\n            <div id="game-over-layout">\n/g, '')
         .replace(/            <!-- Finish photo single -->[\s\S]*?<!-- End finish photo single -->\n/g, '')
         .replace('            </div><!-- Finish photo layout end -->\n', '')
@@ -335,6 +338,7 @@ test('existing page markup, utility classes, and CSS are preserved around reloca
         .replace(/<!--[\s\S]*?-->/g, '').trimEnd();
     // Comments may change as obsolete prototype references are removed.
     const normalizeCss = css => canonicalizeMedia(css)
+        .replace(/        \/\* Restart gesture target \*\/[\s\S]*?\/\* End restart gesture target \*\/\n\n/g, '')
         .replace(/\n\/\* Hand cursor \*\/[\s\S]*?\/\* End hand cursor \*\/\n?/g, '')
         .replace(/\n\/\* Compact gameplay HUD \*\/[\s\S]*?\/\* End compact gameplay HUD \*\/\n?/g, '')
         .replace(/\n\/\* Finish photo presentation \*\/[\s\S]*?\/\* End finish photo presentation \*\/\n?/g, '')
@@ -344,6 +348,42 @@ test('existing page markup, utility classes, and CSS are preserved around reloca
         .replace(/\/\*[\s\S]*?\*\//g, '').trimEnd();
     assert.equal(normalize(fs.readFileSync(path.join(root, 'index.html'), 'utf8')), normalize(original));
     assert.equal(normalizeCss(fs.readFileSync(path.join(root, 'styles/game.css'), 'utf8')), normalizeCss(original.match(/<style>([\s\S]*?)<\/style>/)[1]));
+});
+
+test('restart target is labeled and enlarged without moving the results layout in both languages', async () => {
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+        for (const [lang, label] of [['en', 'Restart'], ['mi', 'Tīmata anō']]) {
+            const { context, page } = await prepare(false, { viewport, stored: { game_lang: lang } });
+            try {
+                const result = await page.evaluate(() => {
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('game-over-screen').classList.remove('hidden');
+                    // Tailwind is stubbed in this harness; supply its existing positioning utility.
+                    document.getElementById('game-over-screen').style.position = 'relative';
+                    const button = document.getElementById('btn-play-again');
+                    const bounds = button.getBoundingClientRect();
+                    const heading = document.getElementById('txt-game-over').getBoundingClientRect();
+                    const panel = document.getElementById('game-over-screen').getBoundingClientRect();
+                    button.style.display = 'none';
+                    const originalHeading = document.getElementById('txt-game-over').getBoundingClientRect();
+                    const originalPanel = document.getElementById('game-over-screen').getBoundingClientRect();
+                    button.style.display = '';
+                    return { label: document.getElementById('txt-play-again').textContent,
+                        width: bounds.width, height: bounds.height,
+                        unchanged: JSON.stringify(heading) === JSON.stringify(originalHeading) &&
+                            JSON.stringify(panel) === JSON.stringify(originalPanel),
+                        topRight: Math.abs(bounds.top - panel.top - 18) < 1 &&
+                            Math.abs(panel.right - bounds.right - 18) < 1,
+                        fits: bounds.left >= 0 && bounds.right <= innerWidth,
+                        icon: button.querySelector('[aria-hidden="true"]').textContent };
+                });
+                assert.equal(result.label, label);
+                assert.equal(result.icon, '↺');
+                assert.ok(result.width >= (viewport.width > 600 ? 144 : 80) && result.height >= 64);
+                assert.ok(result.unchanged && result.topRight && result.fits);
+            } finally { await context.close(); }
+        }
+    }
 });
 
 test('initial screens and persisted preferences match at three viewport sizes', async () => {
